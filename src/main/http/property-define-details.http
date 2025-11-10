@@ -1,0 +1,30 @@
+### Create property define details
+POST http://localhost:8080/api/property-define-details
+Content-Type: application/json
+
+{
+	"detailName": "bedrooms",
+	"isNumber": true,
+	"unit": "room",
+	"showInHomePage": true
+}
+
+### Get property define details by id
+GET http://localhost:8080/api/property-define-details/1
+
+### List property define details (paged)
+GET http://localhost:8080/api/property-define-details?page=0&size=10
+
+### Update property define details
+PUT http://localhost:8080/api/property-define-details/1
+Content-Type: application/json
+
+{
+	"detailName": "bathrooms",
+	"isNumber": true,
+	"unit": "room",
+	"showInHomePage": false
+}
+
+### Delete property define details
+DELETE http://localhost:8080/api/property-define-details/1

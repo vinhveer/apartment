@@ -24,5 +24,3 @@ Content-Type: application/json
 
 ### Delete
 DELETE http://localhost:8080/api/areas/2
-
-

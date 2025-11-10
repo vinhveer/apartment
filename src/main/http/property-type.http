@@ -22,5 +22,3 @@ Content-Type: application/json
 
 ### Delete property type
 DELETE http://localhost:8080/api/property-types/1
-
-
