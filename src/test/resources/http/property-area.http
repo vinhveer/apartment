@@ -1,0 +1,28 @@
+### Create area
+POST http://localhost:8080/api/areas
+Content-Type: application/json
+
+{
+  "areaName": "District 1",
+  "areaLink": "district-1"
+}
+
+### Get by id
+GET http://localhost:8080/api/areas/1
+
+### List areas (paged)
+GET http://localhost:8080/api/areas?page=0&size=10
+
+### Update
+PUT http://localhost:8080/api/areas/1
+Content-Type: application/json
+
+{
+  "areaName": "District 1 Updated",
+  "areaLink": "district-1-updated"
+}
+
+### Delete
+DELETE http://localhost:8080/api/areas/2
+
+
