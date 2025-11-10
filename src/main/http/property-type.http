@@ -1,0 +1,26 @@
+### Create property type
+POST http://localhost:8080/api/property-types
+Content-Type: application/json
+
+{
+	"typeName": "Apartment"
+}
+
+### Get property type detail
+GET http://localhost:8080/api/property-types/1
+
+### List property types with paging
+GET http://localhost:8080/api/property-types?page=0&size=10
+
+### Update property type
+PUT http://localhost:8080/api/property-types/1
+Content-Type: application/json
+
+{
+	"typeName": "Condo"
+}
+
+### Delete property type
+DELETE http://localhost:8080/api/property-types/1
+
+

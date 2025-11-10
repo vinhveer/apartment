@@ -1,4 +1,4 @@
-package com.qminh.apartment.dto.area;
+package com.qminh.apartment.dto.property_area;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

@@ -1,9 +1,9 @@
 package com.qminh.apartment.controller;
 
 import com.qminh.apartment.dto.ApiResponse;
-import com.qminh.apartment.dto.area.PropertyAreaCreateReq;
-import com.qminh.apartment.dto.area.PropertyAreaRes;
-import com.qminh.apartment.dto.area.PropertyAreaUpdateReq;
+import com.qminh.apartment.dto.property_area.PropertyAreaCreateReq;
+import com.qminh.apartment.dto.property_area.PropertyAreaRes;
+import com.qminh.apartment.dto.property_area.PropertyAreaUpdateReq;
 import com.qminh.apartment.service.IPropertyAreaService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;

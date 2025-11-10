@@ -1,7 +1,7 @@
 package com.qminh.apartment.service;
 
-import com.qminh.apartment.dto.area.PropertyAreaCreateReq;
-import com.qminh.apartment.dto.area.PropertyAreaUpdateReq;
+import com.qminh.apartment.dto.property_area.PropertyAreaCreateReq;
+import com.qminh.apartment.dto.property_area.PropertyAreaUpdateReq;
 import com.qminh.apartment.exception.ResourceNotFoundException;
 import com.qminh.apartment.service.impl.PropertyAreaService;
 import com.qminh.apartment.testsupport.PostgresTestContainer;

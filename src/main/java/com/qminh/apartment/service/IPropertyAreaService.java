@@ -1,9 +1,10 @@
 package com.qminh.apartment.service;
-import com.qminh.apartment.dto.area.PropertyAreaCreateReq;
-import com.qminh.apartment.dto.area.PropertyAreaRes;
-import com.qminh.apartment.dto.area.PropertyAreaUpdateReq;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+
+import com.qminh.apartment.dto.property_area.PropertyAreaCreateReq;
+import com.qminh.apartment.dto.property_area.PropertyAreaRes;
+import com.qminh.apartment.dto.property_area.PropertyAreaUpdateReq;
 
 public interface IPropertyAreaService {
 	PropertyAreaRes create(PropertyAreaCreateReq req);

@@ -18,7 +18,7 @@ public interface PropertyAreaRepository extends JpaRepository<PropertyArea, Inte
 
 ### 2) DTO
 - Chia rõ: Request DTO (create/update/filter) và Response DTO.
-- Dùng validation `javax.validation` trên Request DTO: `@NotBlank`, `@Size`, ...
+- Dùng validation `jakarta.validation` trên Request DTO: `@NotBlank`, `@Size`, ...
 - Không lộ toàn bộ entity ra ngoài; chỉ map trường cần.
 - Ví dụ:
 ```java
@@ -40,7 +40,10 @@ public class PropertyAreaRes {
 - Đặt business logic tại đây; controller chỉ điều phối.
 - Sử dụng transaction: `@Transactional` (readOnly cho query).
 - Validate nghiệp vụ (duy nhất, trạng thái, …) và ném exception chuẩn.
-- Map entity ↔ DTO trong service hoặc mapper riêng.
+- TÁCH RIÊNG MAPPING (Entity ↔ DTO) — BẮT BUỘC:
+  - Không mapping trong Controller hay Repository.
+  - BẮT BUỘC dùng mapper chuyên biệt (MapStruct). CẤM mapping thủ công trong Service/Controller.
+  - Service chỉ gọi mapper để chuyển đổi dữ liệu vào/ra.
 - Chuẩn hóa interface/implementation:
   - Tạo interface `I{Domain}Service` khai báo contract public.
   - Implementation đặt tên `{Domain}Service implements I{Domain}Service` và gắn `@Service`.
@@ -49,37 +52,32 @@ public class PropertyAreaRes {
 ```java
 public interface IPropertyAreaService {
   PropertyAreaRes create(PropertyAreaCreateReq req);
-  Optional<PropertyAreaRes> getById(Integer id);
+  PropertyAreaRes get(int id);
+  Page<PropertyAreaRes> list(Pageable pageable);
+  PropertyAreaRes update(int id, PropertyAreaUpdateReq req);
+  void delete(int id);
 }
 
 @Service
 public class PropertyAreaService implements IPropertyAreaService {
   private final PropertyAreaRepository repo;
-  public PropertyAreaService(PropertyAreaRepository repo) { this.repo = repo; }
+  private final PropertyAreaMapper mapper;
+  public PropertyAreaService(PropertyAreaRepository repo, PropertyAreaMapper mapper) {
+    this.repo = repo;
+    this.mapper = mapper;
+  }
 
   @Transactional
   public PropertyAreaRes create(PropertyAreaCreateReq req) {
-    if (repo.existsByAreaName(req.getAreaName())) {
-      throw new IllegalArgumentException("Tên khu vực đã tồn tại");
-    }
-    PropertyArea e = new PropertyArea();
-    e.setAreaName(req.getAreaName());
-    e.setAreaLink(req.getAreaLink());
-    PropertyArea saved = repo.save(e);
-    return toRes(saved);
+    PropertyArea entity = mapper.toEntity(req);
+    PropertyArea saved = repo.save(entity);
+    return mapper.toRes(saved);
   }
 
   @Transactional(readOnly = true)
-  public Optional<PropertyAreaRes> getById(Integer id) {
-    return repo.findById(id).map(this::toRes);
-  }
-
-  private PropertyAreaRes toRes(PropertyArea e) {
-    PropertyAreaRes r = new PropertyAreaRes();
-    r.setAreaId(e.getAreaId());
-    r.setAreaName(e.getAreaName());
-    r.setAreaLink(e.getAreaLink());
-    return r;
+  public PropertyAreaRes get(int id) {
+    PropertyArea area = repo.findById(id).orElseThrow(() -> new ResourceNotFoundException("Area not found: " + id));
+    return mapper.toRes(area);
   }
 }
 ```
@@ -97,47 +95,21 @@ public class PropertyAreaController {
   public PropertyAreaController(IPropertyAreaService service) { this.service = service; }
 
   @PostMapping
-  public ApiResponse<PropertyAreaRes> create(@Valid @RequestBody PropertyAreaCreateReq req) {
+  public ResponseEntity<ApiResponse<PropertyAreaRes>> create(@Valid @RequestBody PropertyAreaCreateReq req) {
     PropertyAreaRes res = service.create(req);
-    return ApiResponse.ok("Tạo khu vực thành công", res);
+    return ResponseEntity.ok(ApiResponse.ok("Create property area successfully", res));
   }
 
   @GetMapping("/{id}")
-  public ApiResponse<PropertyAreaRes> detail(@PathVariable Integer id) {
-    return service.getById(id)
-      .map(r -> ApiResponse.ok("Chi tiết khu vực", r))
-      .orElseGet(() -> ApiResponse.notFound("Không tìm thấy khu vực"));
+  public ResponseEntity<ApiResponse<PropertyAreaRes>> detail(@PathVariable Integer id) {
+    PropertyAreaRes res = service.get(id);
+    return ResponseEntity.ok(ApiResponse.ok("Property area detail", res));
   }
 }
 ```
 
 ### 5) Test
-- Controller/IT:
-  - `@SpringBootTest` + `@AutoConfigureMockMvc`
-  - Kế thừa base Testcontainers (Postgres) khi cần DB thật.
-  - JSON: `contentType(MediaType.APPLICATION_JSON_VALUE)` và body qua `ObjectMapper`.
-  - Assert: `jsonPath(...).value(...)`/`.exists()`.
-- Service (theo cấu trúc hiện tại của dự án):
-  - `@SpringBootTest` + kế thừa base Testcontainers.
-  - `@AutoConfigureTestDatabase(replace = NONE)` để dùng Postgres từ container.
-  - Có thể dùng `@Transactional` trong test method để rollback.
-- Repository:
-  - `@DataJpaTest` + kế thừa base Testcontainers.
-  - `@AutoConfigureTestDatabase(replace = NONE)` để không thay DataSource bằng embedded DB.
-- Lỗi thường gặp & fix nhanh:
-  - Null-safety: dùng `Objects.requireNonNull(...)` cho tham số hợp đồng non-null.
-  - Hamcrest generic: dùng `jsonPath("$.x").value("...")` thay vì `is(...)`.
-  - Testcontainers lifecycle: dùng `@Testcontainers` + `@Container` (không tự start/stop thủ công).
-
-Ví dụ Controller IT snippet:
-```java
-mockMvc.perform(post("/api/areas")
-    .contentType(MediaType.APPLICATION_JSON_VALUE)
-    .content(Objects.requireNonNull(mapper.writeValueAsString(req))))
-  .andExpect(status().isOk())
-  .andExpect(jsonPath("$.message").value("Tạo khu vực thành công"))
-  .andExpect(jsonPath("$.data.areaId").exists());
-```
+xem tài liệu src/test/java/com/qminh/apartment/test.rule.md để viết nhé
 
 ### 6) HTTP (Tài liệu/Thử nghiệm)
 - Tạo file `.http` hoặc Postman/Insomnia collection.
@@ -196,7 +168,7 @@ GET http://localhost:8080/api/areas/1
 - Quy ước code: `VALIDATION_ERROR` (400), `NOT_FOUND` (404), `SQL_CONSTRAINT`/`CONFLICT` (409), `BUSINESS_ERROR` (422), `INTERNAL_ERROR` (500).
 
 ### C) REST + Versioning
-- Base path: `/api/v1/...`
+- Base path hiện tại: `/api/...` (chưa dùng version prefix).
 - Quy tắc:
   - POST `/resources` → tạo
   - GET `/resources/{id}` → chi tiết
@@ -213,38 +185,82 @@ GET http://localhost:8080/api/areas/1
 - Response danh sách:
 ```json
 {
-  "success": true,
-  "code": "OK",
-  "message": "Danh sách",
-  "data": {
-    "content": [ ... ],
-    "page": 0,
-    "size": 20,
-    "totalElements": 123,
-    "totalPages": 7,
-    "sort": "name,asc"
-  },
-  "timestamp": "...",
-  "traceId": "..."
+  "message": "Property area list",
+  "data": [ ... ],
+  "meta": { "page": 0, "size": 20, "total": 123 },
+  "error": null
 }
 ```
 
 ### E) Validation chi tiết
-- Dùng `@NotBlank`, `@Size`, `@Pattern`, `@Email`, ...
+- Dùng `@NotBlank`, `@Size`, `@Pattern`, `@Email`, ... từ `jakarta.validation`.
 - Bản địa hóa message (i18n key) nếu cần; quy ước message ngắn gọn, không nhúng field name (đã có trong cấu trúc `errors[]`).
 - Khác biệt create/update: dùng validation groups hoặc tách DTO.
 
 ### F) Mapping DTO
-- Ưu tiên `MapStruct` cho dự án lớn; nếu nhỏ, mapping thủ công trong Service.
+- BẮT BUỘC dùng `MapStruct` làm mapper chuyên biệt; CẤM mapping thủ công trong Service/Controller.
 - Quy ước đặt tên DTO: `XxxCreateReq`, `XxxUpdateReq`, `XxxFilterReq`, `XxxRes`.
 - Mapper (nếu dùng MapStruct):
 ```java
-@Mapper(componentModel = "spring")
+@Mapper(
+  componentModel = "spring",
+  nullValueCheckStrategy = NullValueCheckStrategy.ALWAYS,
+  nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE
+)
 public interface PropertyAreaMapper {
   PropertyArea toEntity(PropertyAreaCreateReq req);
+  void updateEntityFromReq(PropertyAreaUpdateReq req, @MappingTarget PropertyArea target);
   PropertyAreaRes toRes(PropertyArea e);
 }
 ```
+
+#### Chuẩn MapStruct của repo này (làm theo đúng các file hiện tại)
+- `@Mapper` bắt buộc:
+  - `componentModel = "spring"`
+  - `nullValueCheckStrategy = ALWAYS`
+  - `nullValuePropertyMappingStrategy = IGNORE`
+- Phương thức cho Create:
+  - `toEntity(CreateReq)`: luôn `@Mapping(..., ignore = true)` cho khóa chính và cột audit.
+  - Tên trường khóa chính theo chuẩn entity: ví dụ `typeId`, `areaId`.
+  - Cột audit: `createdAt`, `updatedAt` luôn bị bỏ qua (DB hoặc audit layer set).
+- Phương thức cho Update:
+  - `updateEntityFromReq(UpdateReq, @MappingTarget Entity)` với
+    `@BeanMapping(nullValuePropertyMappingStrategy = IGNORE)` để không overwrite bằng null.
+  - Tiếp tục `ignore = true` cho khóa chính và cột audit.
+- Phương thức phản hồi:
+  - `toRes(Entity)` ánh xạ 1–1 các trường cần expose.
+- Không viết logic nghiệp vụ trong mapper. Mapper chỉ chuyển đổi dữ liệu.
+- Không dùng mapping thủ công trong Service/Controller (chỉ gọi mapper).
+
+Ví dụ bám sát code hiện tại — `PropertyTypeMapper`:
+```java
+@Mapper(
+  componentModel = "spring",
+  nullValueCheckStrategy = NullValueCheckStrategy.ALWAYS,
+  nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE
+)
+public interface PropertyTypeMapper {
+  @Mapping(target = "typeId",    ignore = true)
+  @Mapping(target = "createdAt", ignore = true)
+  @Mapping(target = "updatedAt", ignore = true)
+  PropertyType toEntity(PropertyTypeCreateReq req);
+
+  @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+  @Mapping(target = "typeId",    ignore = true)
+  @Mapping(target = "createdAt", ignore = true)
+  @Mapping(target = "updatedAt", ignore = true)
+  void updateEntityFromReq(PropertyTypeUpdateReq req, @MappingTarget PropertyType target);
+
+  PropertyTypeRes toRes(PropertyType entity);
+}
+```
+
+Gợi ý bổ sung khi mở rộng:
+- Nếu tên trường khác nhau: dùng `@Mapping(source = "reqField", target = "entityField")`.
+- Với quan hệ (relation) phức tạp: không map trực tiếp ID → entity trong mapper; hãy load entity ở Service rồi set vào entity đích trước/hoặc sau khi dùng mapper.
+- Mapping danh sách/trang:
+  - Dùng `page.map(mapper::toRes)` tại Service cho `Page<Entity>`.
+  - Có thể thêm `List<Res> toResList(List<Entity> e)` nếu cần, nhưng ưu tiên dùng stream/page map để tránh dư thừa.
 
 ### G) Security
 - Chuẩn header: `Authorization: Bearer <token>`
@@ -286,9 +302,8 @@ public interface PropertyAreaMapper {
 ### M) HTTP examples phong phú
 ```http
 ### Tạo mới
-POST http://localhost:8080/api/v1/areas
+POST http://localhost:8080/api/areas
 Content-Type: application/json
-Authorization: Bearer <token>
 
 {
   "areaName": "District 1",
@@ -296,9 +311,8 @@ Authorization: Bearer <token>
 }
 
 ### Cập nhật (PUT)
-PUT http://localhost:8080/api/v1/areas/1
+PUT http://localhost:8080/api/areas/1
 Content-Type: application/json
-Authorization: Bearer <token>
 
 {
   "areaName": "District 1 Updated",
@@ -306,27 +320,24 @@ Authorization: Bearer <token>
 }
 
 ### Cập nhật một phần (PATCH)
-PATCH http://localhost:8080/api/v1/areas/1
+PATCH http://localhost:8080/api/areas/1
 Content-Type: application/json
-Authorization: Bearer <token>
 
 {
   "areaName": "District 1 Partial"
 }
 
 ### Danh sách có paging/sort/filter
-GET http://localhost:8080/api/v1/areas?page=0&size=20&sort=areaName,asc&q=district
-Authorization: Bearer <token>
+GET http://localhost:8080/api/areas?page=0&size=20&sort=areaName,asc&q=district
 
 ### Xóa
-DELETE http://localhost:8080/api/v1/areas/1
-Authorization: Bearer <token>
+DELETE http://localhost:8080/api/areas/1
 ```
 
 ### N) Checklist mở rộng khi thêm API
-- ApiResponse: đúng schema, có `timestamp`, `traceId`.
+- ApiResponse: đúng schema hiện tại (`message`, `data`, `meta`, `error`).
 - Exception: map đầy đủ qua `@ControllerAdvice`.
-- REST: đường dẫn `/api/v1/...`, đúng method semantics.
+- REST: đường dẫn `/api/...`, đúng method semantics.
 - Paging/sort/filter: tham số chuẩn, response có metadata.
 - Validation: đủ ràng buộc, message rõ ràng.
 - DTO/Mapper: không lộ entity, mapping nhất quán.
