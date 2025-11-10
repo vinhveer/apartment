@@ -4,6 +4,8 @@
 
 Mục tiêu: thêm 1 hoặc nhiều API nhất quán, dễ bảo trì, có test đầy đủ.
 
+---
+
 ### 1) Repository
 - Tạo `Repository` extends `JpaRepository<Entity, IdType>`.
 - Đặt tên method theo Spring Data (findBy..., existsBy..., countBy...).
@@ -15,6 +17,24 @@ public interface PropertyAreaRepository extends JpaRepository<PropertyArea, Inte
   boolean existsByAreaName(String areaName);
 }
 ```
+
+Quy ước hiện tại trong workspace:
+- `UserRepository` sử dụng `@EntityGraph(attributePaths = "role")` cho `findByUsername(...)` và `findByEmail(...)` để load role eager, tránh `LazyInitializationException`:
+```java
+@EntityGraph(attributePaths = "role")
+Optional<User> findByUsername(String username);
+@EntityGraph(attributePaths = "role")
+Optional<User> findByEmail(String email);
+```
+- `RefreshTokenRepository` có method revoke:
+```java
+@Modifying(clearAutomatically = true, flushAutomatically = true)
+@Transactional
+@Query("update RefreshToken r set r.revoked = true where r.token = ?1")
+void revoke(String token);
+```
+
+---
 
 ### 2) DTO
 - Chia rõ: Request DTO (create/update/filter) và Response DTO.
@@ -35,6 +55,20 @@ public class PropertyAreaRes {
   // getters/setters
 }
 ```
+
+Đối với Auth/Account/Users (đã có sẵn trong repo):
+- Auth:
+  - `LoginReq { username, password }`
+  - `AuthRes { accessToken, user { id, username, roles[] } }`
+  - `RefreshRes { accessToken }`, `MessageRes { message }`
+- Account:
+  - `SaleCreateReq { username, email, password, displayName, fullName, phone }`
+  - `AdminCreateReq { username, email, password, displayName }`
+- Users:
+  - `UserUpdateReq { email, displayName }`
+  - `UserRes { id, username, email, displayName, roleName }`
+
+---
 
 ### 3) Service
 - Đặt business logic tại đây; controller chỉ điều phối.
@@ -82,6 +116,15 @@ public class PropertyAreaService implements IPropertyAreaService {
 }
 ```
 
+Đối với Account/Users:
+- `IAccountService` + `AccountService`:
+  - `createSale(SaleCreateReq)` tạo `User` role SALE và ghi `PropertySaleInfo`.
+  - `createAdmin(AdminCreateReq)` tạo `User` role ADMIN.
+- `IUsersService` + `UsersService`:
+  - `get/list/update/delete` user (update không đổi role; delete sẽ xóa `PropertySaleInfo` trước để tránh lỗi FK).
+
+---
+
 ### 4) Controller
 - Tiếp nhận/validate request, gọi service, trả `ApiResponse` thống nhất.
 - Đặt route theo resource, dùng chuẩn REST: GET/POST/PUT/PATCH/DELETE.
@@ -108,8 +151,33 @@ public class PropertyAreaController {
 }
 ```
 
+Hiện có các controller quan trọng:
+- `AuthController`:
+  - `POST /api/auth/login` → `AuthRes` + set cookie `refresh_token` (HttpOnly; Secure; SameSite=Strict; Path=/api/auth)
+  - `POST /api/auth/refresh` → `RefreshRes` + rotate refresh cookie
+  - `POST /api/auth/logout` → revoke + clear refresh cookie
+- `AccountController`:
+  - `POST /api/create-sale` (ADMIN)
+  - `POST /api/create-admin` (ADMIN)
+- `UsersController`:
+  - `GET /api/users/me` (đã đăng nhập)
+  - `GET /api/users/{id}` (ADMIN), `GET /api/users` (ADMIN)
+  - `PUT /api/users/{id}` (ADMIN), `DELETE /api/users/{id}` (ADMIN)
+
+---
+
 ### 5) Test
 xem tài liệu src/test/java/com/qminh/apartment/test.rule.md để viết nhé
+
+Các test hiện có (mẫu để tham khảo nhanh):
+- Controller IT: `Property*ControllerIT`, `AuthControllerIT`, `AccountControllerIT`, `UsersControllerIT`
+- Repository: `Property*RepositoryTest`, `UserRepositoryTest`, `RoleRepositoryTest`, `PropertySaleInfoRepositoryTest`, `RefreshTokenRepositoryTest`
+- Service: `Property*ServiceTest`, `AccountServiceTest`, `UsersServiceTest`, `RefreshTokenServiceTest`, `CustomUserDetailsServiceTest`
+- Lưu ý với Security:
+  - Các controller không liên quan auth có thể dùng `@AutoConfigureMockMvc(addFilters = false)` cho nhanh.
+  - Các route cần security → để filters mặc định và assert 401/403 đúng như rule.
+
+---
 
 ### 6) HTTP (Tài liệu/Thử nghiệm)
 - Tạo file `.http` hoặc Postman/Insomnia collection.
@@ -127,6 +195,39 @@ Content-Type: application/json
 ### Chi tiết khu vực
 GET http://localhost:8080/api/areas/1
 ```
+
+Ví dụ Auth/Account/Users (đã có trong repo):
+```http
+### Login
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{ "username": "vinh", "password": "123456" }
+
+### Me (Bearer)
+GET http://localhost:8080/api/users/me
+Authorization: Bearer {{ACCESS_TOKEN}}
+
+### Create sale (ADMIN)
+POST http://localhost:8080/api/create-sale
+Content-Type: application/json
+Authorization: Bearer {{ACCESS_TOKEN}}
+
+{ "username": "sale01", "email": "sale01@example.com", "password": "123456", "displayName": "Sale 01", "fullName": "Sale Person 01", "phone": "0900000001" }
+
+### Create admin (ADMIN)
+POST http://localhost:8080/api/create-admin
+Content-Type: application/json
+Authorization: Bearer {{ACCESS_TOKEN}}
+
+{ "username": "admin01", "email": "admin01@example.com", "password": "123456", "displayName": "Admin 01" }
+
+### Users CRUD (ADMIN)
+GET http://localhost:8080/api/users?page=0&size=10
+Authorization: Bearer {{ACCESS_TOKEN}}
+```
+
+---
 
 ### Checklist khi thêm API
 - Repository: method cần thiết, tên rõ ràng.
@@ -161,11 +262,13 @@ GET http://localhost:8080/api/areas/1
   - Thành công: 200 OK (hoặc 201 Created khi tạo mới nếu muốn).
   - Lỗi client: 400 VALIDATION_ERROR, 404 NOT_FOUND, 409 SQL_CONSTRAINT/CONFLICT, 422 BUSINESS_ERROR.
   - Lỗi server: 500 INTERNAL_ERROR.
+  - Bổ sung: 401 UNAUTHORIZED (thiếu/invalid auth), 403 FORBIDDEN (không đủ quyền).
 
 ### B) Chuẩn hóa lỗi/exception
 - Dùng `@ControllerAdvice` + `@ExceptionHandler` để map exception → ApiResponse.error(code, message, details).
 - Validation error: trả `VALIDATION_ERROR` (400) với map field → message.
 - Quy ước code: `VALIDATION_ERROR` (400), `NOT_FOUND` (404), `SQL_CONSTRAINT`/`CONFLICT` (409), `BUSINESS_ERROR` (422), `INTERNAL_ERROR` (500).
+  - Đã map `AccessDeniedException`/`AuthorizationDeniedException` → 403 FORBIDDEN, `AuthenticationException` → 401 UNAUTHORIZED.
 
 ### C) REST + Versioning
 - Base path hiện tại: `/api/...` (chưa dùng version prefix).
@@ -261,6 +364,7 @@ Gợi ý bổ sung khi mở rộng:
 - Mapping danh sách/trang:
   - Dùng `page.map(mapper::toRes)` tại Service cho `Page<Entity>`.
   - Có thể thêm `List<Res> toResList(List<Entity> e)` nếu cần, nhưng ưu tiên dùng stream/page map để tránh dư thừa.
+- Với `UserMapper`: bỏ qua các trường `role`, `password` (khi update), `username` (khi update), `emailVerifiedAt`, `rememberToken`, `propertySaleInfo`, và cột audit.
 
 ### G) Security
 - Chuẩn header: `Authorization: Bearer <token>`
@@ -268,6 +372,13 @@ Gợi ý bổ sung khi mở rộng:
   - Ví dụ: `@PreAuthorize("hasRole('ADMIN')")` cho tạo/cập nhật/xóa
   - `@PreAuthorize("permitAll()")` cho GET danh sách/chi tiết (tùy yêu cầu)
 - Khi yêu cầu auth bắt buộc: trả 401 nếu thiếu/invalid, 403 nếu thiếu quyền.
+
+Chuẩn hiện tại trong workspace:
+- Stateless: `SecurityFilterChain` với `SessionCreationPolicy.STATELESS`, `csrf.disable()`, `cors(default)` (origin FE: `http://localhost:3000`), add `JwtAuthFilter` trước `UsernamePasswordAuthenticationFilter`.
+- Public routes: `POST /api/auth/login`, `POST /api/auth/refresh`, `POST /api/auth/logout`.
+- Protected routes: còn lại, đặc biệt `/api/create-sale`, `/api/create-admin`, `/api/users/**`.
+- `JwtAuthFilter` đọc `Authorization: Bearer <accessToken>` và set `Authentication`.
+- `CustomUserDetailsService` hỗ trợ username/email, map role `role.roleName` → `ROLE_<UPPER>`.
 
 ### H) Transaction & đồng bộ dữ liệu
 - Mặc định:
@@ -347,4 +458,22 @@ DELETE http://localhost:8080/api/areas/1
 - DB: index/unique/constraint rõ ràng, migrate với Flyway.
 - Observability: log phù hợp, traceId nhất quán.
 - Tài liệu: có annotation OpenAPI, ví dụ HTTP cập nhật kèm.
+
+---
+
+## Auth REST (JWT stateless) — Chuẩn workspace (tóm tắt)
+- Token:
+  - Access: TTL 10', payload gồm `sub`, `authorities[]`, `jti`, ký HS256 bằng secret `app.jwt.secret` (Base64).
+  - Refresh: TTL 14d, rotate mỗi lần refresh, lưu DB (`refresh_token`), revoke cũ.
+- Cookie refresh:
+  - Tên `refresh_token`, `HttpOnly; Secure; SameSite=Strict; Path=/api/auth`.
+- Endpoints:
+  - `POST /api/auth/login` → trả `AuthRes` + set cookie refresh.
+  - `POST /api/auth/refresh` → đọc cookie, validate + rotate, trả `RefreshRes` + cookie mới.
+  - `POST /api/auth/logout` → revoke + clear cookie.
+- Phân quyền:
+  - `/api/create-sale`, `/api/create-admin`, `/api/users/**` yêu cầu ADMIN.
+  - `/api/users/me` yêu cầu đăng nhập.
+- Tests:
+  - Có IT cho login/refresh/logout, account creation, users CRUD, và các case 401/403.
 

@@ -57,5 +57,3 @@ public class Property {
 	@OneToMany(mappedBy = "property", fetch = FetchType.LAZY)
 	private Set<PropertyDetails> details = new LinkedHashSet<>();
 }
-
-

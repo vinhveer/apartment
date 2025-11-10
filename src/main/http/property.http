@@ -1,0 +1,39 @@
+### Create property
+POST http://localhost:8080/api/properties
+Content-Type: application/json
+
+{
+	"title": "Prop A",
+	"price": 1000.00,
+	"description": "desc",
+	"typeId": 1,
+	"saleUserId": 1,
+	"areaId": 1,
+	"isPublic": true
+}
+
+### Get property detail
+GET http://localhost:8080/api/properties/1
+
+### List properties with paging
+GET http://localhost:8080/api/properties?page=0&size=10
+
+### Update property
+PUT http://localhost:8080/api/properties/1
+Content-Type: application/json
+
+{
+	"title": "Prop B",
+	"price": 2000.00,
+	"description": "desc2",
+	"typeId": 1,
+	"saleUserId": 1,
+	"areaId": 1,
+	"isPublic": false
+}
+
+### Delete property
+DELETE http://localhost:8080/api/properties/1
+
+
+

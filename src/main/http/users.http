@@ -1,0 +1,24 @@
+### Get user by id
+GET http://localhost:8080/api/users/1
+Authorization: Bearer {{ACCESS_TOKEN}}
+
+### List users
+GET http://localhost:8080/api/users?page=0&size=10
+Authorization: Bearer {{ACCESS_TOKEN}}
+
+### Update user
+PUT http://localhost:8080/api/users/1
+Content-Type: application/json
+Authorization: Bearer {{ACCESS_TOKEN}}
+
+{
+	"email": "user1+new@example.com",
+	"displayName": "User 1 New"
+}
+
+### Delete user
+DELETE http://localhost:8080/api/users/1
+Authorization: Bearer {{ACCESS_TOKEN}}
+
+
+
