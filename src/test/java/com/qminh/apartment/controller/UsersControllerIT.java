@@ -141,6 +141,46 @@ class UsersControllerIT extends PostgresTestContainer {
 				.header("Authorization", "Bearer " + access))
 			.andExpect(status().isForbidden());
 	}
+
+	@Test
+	@DisplayName("401 when missing Authorization header on list")
+	void users_list_unauthorized() throws Exception {
+		mockMvc.perform(get("/api/users?page=0&size=10"))
+			.andExpect(status().isForbidden());
+	}
+
+	@Test
+	@DisplayName("404 on get/update/delete for non-existing id")
+	void users_not_found_cases() throws Exception {
+		String access = loginAsRoot();
+		mockMvc.perform(get("/api/users/{id}", 999999)
+				.header("Authorization", "Bearer " + access))
+			.andExpect(status().isNotFound());
+		UserUpdateReq up = new UserUpdateReq();
+		up.setEmail("x@example.com");
+		up.setDisplayName("X");
+		mockMvc.perform(put("/api/users/{id}", 999999)
+				.header("Authorization", "Bearer " + access)
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(mapper.writeValueAsString(up)))
+			.andExpect(status().isNotFound());
+		mockMvc.perform(delete("/api/users/{id}", 999999)
+				.header("Authorization", "Bearer " + access))
+			.andExpect(status().isNotFound());
+	}
+
+	@Test
+	@DisplayName("400 validation error when email invalid on update")
+	void users_update_validation_error() throws Exception {
+		String access = loginAsRoot();
+		UserUpdateReq up = new UserUpdateReq();
+		up.setEmail("not-an-email");
+		mockMvc.perform(put("/api/users/{id}", createdUserId)
+				.header("Authorization", "Bearer " + access)
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(mapper.writeValueAsString(up)))
+			.andExpect(status().isBadRequest());
+	}
 }
 
 

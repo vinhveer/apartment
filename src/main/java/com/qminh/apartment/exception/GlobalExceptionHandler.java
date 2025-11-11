@@ -24,6 +24,12 @@ public class GlobalExceptionHandler {
 			.body(ApiResponse.error("NOT_FOUND", ex.getMessage(), null));
 	}
 
+	@ExceptionHandler(ConflictException.class)
+	public ResponseEntity<ApiResponse<Void>> handleConflict(ConflictException ex) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+			.body(ApiResponse.error("CONFLICT", ex.getMessage(), null));
+	}
+
 	@ExceptionHandler(DataIntegrityViolationException.class)
 	public ResponseEntity<ApiResponse<Void>> handleSql(DataIntegrityViolationException ex) {
 		Throwable root = ex.getRootCause();

@@ -61,6 +61,46 @@ class PropertyTypeControllerIT extends PostgresTestContainer {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.message").value("Delete property type successfully"));
 	}
+
+	@Test
+	@DisplayName("GET list returns meta and data; 404/409/400 cases")
+	void list_and_error_cases() throws Exception {
+		// create one
+		PropertyTypeCreateReq req = new PropertyTypeCreateReq();
+		req.setTypeName("PTA");
+		mockMvc.perform(post("/api/property-types")
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(Objects.requireNonNull(mapper.writeValueAsString(req))))
+			.andExpect(status().isOk());
+		// list
+		mockMvc.perform(get("/api/property-types?page=0&size=5"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.meta.total").exists())
+			.andExpect(jsonPath("$.data.content").isArray());
+		// 404 get/update/delete not found
+		mockMvc.perform(get("/api/property-types/{id}", 999999))
+			.andExpect(status().isNotFound());
+		PropertyTypeUpdateReq up = new PropertyTypeUpdateReq();
+		up.setTypeName("X");
+		mockMvc.perform(put("/api/property-types/{id}", 999999)
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(Objects.requireNonNull(mapper.writeValueAsString(up))))
+			.andExpect(status().isNotFound());
+		mockMvc.perform(delete("/api/property-types/{id}", 999999))
+			.andExpect(status().isNotFound());
+		// 409 duplicate
+		PropertyTypeCreateReq dup = new PropertyTypeCreateReq();
+		dup.setTypeName("PTA");
+		mockMvc.perform(post("/api/property-types")
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(Objects.requireNonNull(mapper.writeValueAsString(dup))))
+			.andExpect(status().isConflict());
+		// 400 validation missing
+		mockMvc.perform(post("/api/property-types")
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content("{}"))
+			.andExpect(status().isBadRequest());
+	}
 }
 
 

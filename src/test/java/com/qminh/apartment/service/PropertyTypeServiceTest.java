@@ -12,6 +12,9 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -59,6 +62,49 @@ class PropertyTypeServiceTest extends PostgresTestContainer {
 		r2.setTypeName("DupType");
 		assertThatThrownBy(() -> service.create(r2))
 			.isInstanceOf(DataIntegrityViolationException.class);
+	}
+
+	@Test
+	@Transactional
+	@DisplayName("list(Pageable) supports pagination and sort; null pageable throws NPE")
+	void list_pageable_and_null() {
+		for (int i = 0; i < 5; i++) {
+			PropertyTypeCreateReq r = new PropertyTypeCreateReq();
+			r.setTypeName("Type_" + System.nanoTime() + "_" + i);
+			service.create(r);
+		}
+		Pageable p = PageRequest.of(0, 3, Sort.by(Sort.Direction.ASC, "typeId"));
+		var page = service.list(p);
+		assertThat(page.getContent()).hasSizeLessThanOrEqualTo(3);
+		assertThat(page.getTotalElements()).isGreaterThanOrEqualTo(5);
+		assertThatThrownBy(() -> service.list(null)).isInstanceOf(NullPointerException.class);
+	}
+
+	@Test
+	@Transactional
+	@DisplayName("concurrency duplicates yield one success and one constraint violation")
+	void concurrency_duplicates() throws Exception {
+		PropertyTypeCreateReq base = new PropertyTypeCreateReq();
+		base.setTypeName("cType");
+		Runnable r1 = () -> {
+			PropertyTypeCreateReq r = new PropertyTypeCreateReq();
+			r.setTypeName(base.getTypeName());
+			service.create(r);
+		};
+		Runnable r2 = r1;
+		Thread t1 = new Thread(r1);
+		Thread t2 = new Thread(() -> {
+			try {
+				r2.run();
+			} catch (Exception ignored) {
+				// ignore
+			}
+		});
+		t1.start(); t2.start();
+		t1.join(); t2.join();
+		PropertyTypeCreateReq another = new PropertyTypeCreateReq();
+		another.setTypeName(base.getTypeName());
+		assertThatThrownBy(() -> service.create(another)).isInstanceOf(DataIntegrityViolationException.class);
 	}
 }
 

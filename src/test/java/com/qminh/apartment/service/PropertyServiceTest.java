@@ -14,6 +14,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -101,9 +104,49 @@ class PropertyServiceTest extends PostgresTestContainer {
 		req.setAreaId(areaId);
 		req.setIsPublic(false);
 		var created = service.create(req);
-		service.delete(created.getPropertyId());
-		assertThatThrownBy(() -> service.get(created.getPropertyId()))
+		Long deletedId = created.getPropertyId();
+		service.delete(deletedId);
+		assertThatThrownBy(() -> service.get(deletedId))
 			.isInstanceOf(ResourceNotFoundException.class);
+	}
+
+	@Test
+	@Transactional
+	@DisplayName("list(Pageable) supports pagination and sort; null pageable throws NPE")
+	void list_pageable_and_null() {
+		for (int i = 0; i < 5; i++) {
+			PropertyCreateReq req = new PropertyCreateReq();
+			req.setTitle("Tx_" + System.nanoTime() + "_" + i);
+			req.setPrice(new BigDecimal("100.00"));
+			req.setDescription("d");
+			req.setTypeId(typeId);
+			req.setSaleUserId(saleUserId);
+			req.setAreaId(areaId);
+			req.setIsPublic(true);
+			service.create(req);
+		}
+		Pageable p = PageRequest.of(0, 3, Sort.by(Sort.Direction.ASC, "propertyId"));
+		var page = service.list(p);
+		assertThat(page.getContent()).hasSizeLessThanOrEqualTo(3);
+		assertThat(page.getTotalElements()).isGreaterThanOrEqualTo(5);
+		assertThatThrownBy(() -> service.list(null)).isInstanceOf(NullPointerException.class);
+	}
+
+	@Test
+	@Transactional
+	@DisplayName("not found cases: get/update/delete with non-existing id")
+	void not_found_cases() {
+		assertThatThrownBy(() -> service.get(999999)).isInstanceOf(ResourceNotFoundException.class);
+		PropertyUpdateReq up = new PropertyUpdateReq();
+		up.setTitle("N");
+		up.setPrice(new BigDecimal("1.00"));
+		up.setDescription("n");
+		up.setTypeId(typeId);
+		up.setSaleUserId(saleUserId);
+		up.setAreaId(areaId);
+		up.setIsPublic(true);
+		assertThatThrownBy(() -> service.update(999999, up)).isInstanceOf(ResourceNotFoundException.class);
+		assertThatThrownBy(() -> service.delete(999999)).isInstanceOf(ResourceNotFoundException.class);
 	}
 }
 

@@ -12,6 +12,7 @@ import com.qminh.apartment.repository.PropertySaleInfoRepository;
 import com.qminh.apartment.repository.RoleRepository;
 import com.qminh.apartment.repository.UserRepository;
 import com.qminh.apartment.service.IAccountService;
+import com.qminh.apartment.exception.ConflictException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +41,13 @@ public class AccountService implements IAccountService {
 
 	@Transactional
 	public UserRes createSale(SaleCreateReq req) {
+		// early duplicates check to return clear 409 CONFLICT instead of DB error
+		userRepository.findByUsername(req.getUsername()).ifPresent(u -> {
+			throw new ConflictException("Username already exists: " + req.getUsername());
+		});
+		userRepository.findByEmail(req.getEmail()).ifPresent(u -> {
+			throw new ConflictException("Email already exists: " + req.getEmail());
+		});
 		Role sale = roleRepository.findByRoleName("SALE").orElseThrow();
 		User user = userMapper.toEntity(req);
 		user.setPassword(passwordEncoder.encode(req.getPassword()));
@@ -55,6 +63,13 @@ public class AccountService implements IAccountService {
 
 	@Transactional
 	public UserRes createAdmin(AdminCreateReq req) {
+		// early duplicates check to return clear 409 CONFLICT instead of DB error
+		userRepository.findByUsername(req.getUsername()).ifPresent(u -> {
+			throw new ConflictException("Username already exists: " + req.getUsername());
+		});
+		userRepository.findByEmail(req.getEmail()).ifPresent(u -> {
+			throw new ConflictException("Email already exists: " + req.getEmail());
+		});
 		Role admin = roleRepository.findByRoleName("ADMIN").orElseThrow();
 		User user = userMapper.toEntity(req);
 		user.setPassword(passwordEncoder.encode(req.getPassword()));

@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.lang.NonNull;
 
 import java.util.Objects;
 
@@ -51,6 +52,21 @@ class PropertyDefineDetailsRepositoryTest extends PostgresTestContainer {
 		repository.saveAndFlush(d1);
 		assertThat(repository.existsByDetailName("n1")).isTrue();
 		assertThat(repository.existsByDetailName("n2")).isFalse();
+	}
+
+	@Test
+	@DisplayName("existsByDetailName edge cases: case sensitivity and whitespace")
+	void exists_by_name_edges() {
+		save("detail-x");
+		assertThat(repository.existsByDetailName("detail-x")).isTrue();
+		assertThat(repository.existsByDetailName("DETAIL-X")).isFalse();
+		assertThat(repository.existsByDetailName(" detail-x ")).isFalse();
+	}
+
+	private @NonNull PropertyDefineDetails save(String name) {
+		PropertyDefineDetails e = new PropertyDefineDetails();
+		e.setDetailName(name);
+		return repository.saveAndFlush(e);
 	}
 }
 

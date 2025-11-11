@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.lang.NonNull;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -59,6 +60,41 @@ class PropertyAreaRepositoryTest extends PostgresTestContainer {
 
 		assertThatThrownBy(() -> repository.saveAndFlush(a2))
 			.isInstanceOf(DataIntegrityViolationException.class);
+	}
+
+	@Test
+	@DisplayName("existsByAreaName/existsByAreaLink true/false and edge cases")
+	void exists_checks() {
+		PropertyArea a = new PropertyArea();
+		a.setAreaName("District X");
+		a.setAreaLink("district-x");
+		repository.saveAndFlush(a);
+		assertThat(repository.existsByAreaName("District X")).isTrue();
+		assertThat(repository.existsByAreaName("district x")).isFalse();
+		assertThat(repository.existsByAreaName(" District X ")).isFalse();
+		assertThat(repository.existsByAreaLink("district-x")).isTrue();
+		assertThat(repository.existsByAreaLink("DISTRICT-X")).isFalse();
+		assertThat(repository.existsByAreaLink(" district-x ")).isFalse();
+		assertThat(repository.existsByAreaName("Unknown")).isFalse();
+		assertThat(repository.existsByAreaLink("unknown")).isFalse();
+	}
+
+	@Test
+	@DisplayName("findByAreaLink present/empty and case sensitivity")
+	void find_by_area_link() {
+		String link = "area-l-" + System.nanoTime();
+		newArea("Area L", link);
+		assertThat(repository.findByAreaLink(link)).isPresent();
+		assertThat(repository.findByAreaLink(link.toUpperCase())).isNotPresent();
+		assertThat(repository.findByAreaLink(" " + link + " ")).isNotPresent();
+		assertThat(repository.findByAreaLink("not-exist")).isNotPresent();
+	}
+
+	private @NonNull PropertyArea newArea(String name, String link) {
+		PropertyArea a = new PropertyArea();
+		a.setAreaName(name);
+		a.setAreaLink(link);
+		return repository.saveAndFlush(a);
 	}
 }
 

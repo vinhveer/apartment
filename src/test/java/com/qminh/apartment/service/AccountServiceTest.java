@@ -18,6 +18,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import com.qminh.apartment.exception.ConflictException;
 
 @SpringBootTest
 @AutoConfigureTestDatabase(replace = Replace.NONE)
@@ -67,6 +69,46 @@ class AccountServiceTest extends PostgresTestContainer {
 		var res = service.createAdmin(req);
 		assertThat(res.getUsername()).isEqualTo("adminT");
 		assertThat(userRepository.findByUsername("adminT")).isPresent();
+	}
+
+	@Test
+	@Transactional
+	@DisplayName("createSale duplicate username/email -> ConflictException (409)")
+	void create_sale_duplicate_conflict() {
+		SaleCreateReq req1 = new SaleCreateReq();
+		req1.setUsername("dupSale");
+		req1.setEmail("dupSale@example.com");
+		req1.setPassword("123456");
+		req1.setDisplayName("Dup Sale");
+		req1.setFullName("Dup S");
+		req1.setPhone("0900");
+		service.createSale(req1);
+		SaleCreateReq req2 = new SaleCreateReq();
+		req2.setUsername("dupSale");
+		req2.setEmail("dupSale@example.com");
+		req2.setPassword("123456");
+		req2.setDisplayName("Dup Sale 2");
+		req2.setFullName("Dup S2");
+		req2.setPhone("0901");
+		assertThatThrownBy(() -> service.createSale(req2)).isInstanceOf(ConflictException.class);
+	}
+
+	@Test
+	@Transactional
+	@DisplayName("createAdmin duplicate username/email -> ConflictException (409)")
+	void create_admin_duplicate_conflict() {
+		AdminCreateReq a1 = new AdminCreateReq();
+		a1.setUsername("dupAdmin");
+		a1.setEmail("dupAdmin@example.com");
+		a1.setPassword("123456");
+		a1.setDisplayName("Dup Admin");
+		service.createAdmin(a1);
+		AdminCreateReq a2 = new AdminCreateReq();
+		a2.setUsername("dupAdmin");
+		a2.setEmail("dupAdmin@example.com");
+		a2.setPassword("123456");
+		a2.setDisplayName("Dup Admin 2");
+		assertThatThrownBy(() -> service.createAdmin(a2)).isInstanceOf(ConflictException.class);
 	}
 }
 

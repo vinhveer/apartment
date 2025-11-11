@@ -140,6 +140,58 @@ class AccountControllerIT extends PostgresTestContainer {
 				.content(mapper.writeValueAsString(admin)))
 			.andExpect(status().isForbidden());
 	}
+
+	@Test
+	@DisplayName("401 when missing Authorization header")
+	void unauthorized_when_no_bearer() throws Exception {
+		SaleCreateReq sale = new SaleCreateReq();
+		sale.setUsername("sale401");
+		sale.setEmail("sale401@example.com");
+		sale.setPassword("123456");
+		sale.setDisplayName("Sale 401");
+		sale.setFullName("S401");
+		sale.setPhone("0900");
+		mockMvc.perform(post("/api/create-sale")
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(mapper.writeValueAsString(sale)))
+			.andExpect(status().isForbidden());
+	}
+
+	@Test
+	@DisplayName("400 validation error when required fields missing")
+	void create_sale_validation_error() throws Exception {
+		String access = loginAsRoot();
+		SaleCreateReq sale = new SaleCreateReq(); // missing all fields
+		mockMvc.perform(post("/api/create-sale")
+				.header("Authorization", "Bearer " + access)
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(mapper.writeValueAsString(sale)))
+			.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	@DisplayName("409 conflict when creating duplicate username/email")
+	void conflict_on_duplicate() throws Exception {
+		String access = loginAsRoot();
+		SaleCreateReq sale = new SaleCreateReq();
+		sale.setUsername("dupUser");
+		sale.setEmail("dup@example.com");
+		sale.setPassword("123456");
+		sale.setDisplayName("Dup");
+		sale.setFullName("Dup Full");
+		sale.setPhone("0900");
+		mockMvc.perform(post("/api/create-sale")
+				.header("Authorization", "Bearer " + access)
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(mapper.writeValueAsString(sale)))
+			.andExpect(status().isOk());
+		// duplicate
+		mockMvc.perform(post("/api/create-sale")
+				.header("Authorization", "Bearer " + access)
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(mapper.writeValueAsString(sale)))
+			.andExpect(status().isConflict());
+	}
 }
 
 

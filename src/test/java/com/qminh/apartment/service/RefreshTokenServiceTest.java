@@ -13,12 +13,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @AutoConfigureTestDatabase(replace = Replace.NONE)
@@ -29,6 +31,7 @@ class RefreshTokenServiceTest extends PostgresTestContainer {
 	@Autowired private UserRepository userRepository;
 
 	private String username;
+	private String otherUsername;
 
 	@BeforeEach
 	void setupUser() {
@@ -43,6 +46,14 @@ class RefreshTokenServiceTest extends PostgresTestContainer {
 		u.setPassword("x");
 		u.setRole(role);
 		userRepository.saveAndFlush(u);
+
+		otherUsername = "rttest_other_" + System.nanoTime();
+		User o = new User();
+		o.setUsername(otherUsername);
+		o.setEmail(otherUsername + "@example.com");
+		o.setPassword("x");
+		o.setRole(role);
+		userRepository.saveAndFlush(o);
 	}
 
 	@Test
@@ -64,6 +75,51 @@ class RefreshTokenServiceTest extends PostgresTestContainer {
 
 		service.revoke(t2);
 		assertThat(service.isValid(t2)).isFalse();
+	}
+
+	@Test
+	@Transactional
+	@DisplayName("rotate fails with 403 (AccessDeniedException) when token not owned by username")
+	void rotate_fails_when_not_owner() {
+		String t1 = "own_" + UUID.randomUUID();
+		LocalDateTime exp = LocalDateTime.now().plusDays(1);
+		service.storeOrRotate(username, t1, exp);
+		String newTok = "new_" + UUID.randomUUID();
+		LocalDateTime newExp = LocalDateTime.now().plusDays(2);
+		assertThatThrownBy(() -> service.rotate(t1, newTok, newExp, otherUsername))
+			.isInstanceOf(AccessDeniedException.class);
+	}
+
+	@Test
+	@Transactional
+	@DisplayName("rotate fails with 400 (IllegalArgumentException) when token expired or revoked")
+	void rotate_fails_when_expired_or_revoked() {
+		// expired case
+		String tExpired = "exp_" + UUID.randomUUID();
+		service.storeOrRotate(username, tExpired, LocalDateTime.now().minusMinutes(1));
+		String n1 = "n1_" + UUID.randomUUID();
+		LocalDateTime exp1 = LocalDateTime.now().plusDays(1);
+		assertThatThrownBy(() -> service.rotate(tExpired, n1, exp1, username))
+			.isInstanceOf(IllegalArgumentException.class);
+		// revoked case
+		String tValid = "valid_" + UUID.randomUUID();
+		service.storeOrRotate(username, tValid, LocalDateTime.now().plusDays(1));
+		service.revoke(tValid);
+		String n2 = "n2_" + UUID.randomUUID();
+		LocalDateTime exp2 = LocalDateTime.now().plusDays(1);
+		assertThatThrownBy(() -> service.rotate(tValid, n2, exp2, username))
+			.isInstanceOf(IllegalArgumentException.class);
+	}
+
+	@Test
+	@Transactional
+	@DisplayName("isValid returns false for blank, nonexistent, and expired tokens")
+	void is_valid_edge_cases() {
+		assertThat(service.isValid("")).isFalse();
+		assertThat(service.isValid("does_not_exist")).isFalse();
+		String t = "soon_" + UUID.randomUUID();
+		service.storeOrRotate(username, t, LocalDateTime.now().minusMinutes(1));
+		assertThat(service.isValid(t)).isFalse();
 	}
 }
 

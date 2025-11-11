@@ -5,6 +5,8 @@ import com.qminh.apartment.entity.User;
 import com.qminh.apartment.repository.RefreshTokenRepository;
 import com.qminh.apartment.repository.UserRepository;
 import com.qminh.apartment.service.IRefreshTokenService;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,16 +18,20 @@ public class RefreshTokenService implements IRefreshTokenService {
 
 	private final RefreshTokenRepository refreshRepo;
 	private final UserRepository userRepo;
+	private final IRefreshTokenService self;
 
-	public RefreshTokenService(RefreshTokenRepository refreshRepo, UserRepository userRepo) {
+	public RefreshTokenService(RefreshTokenRepository refreshRepo, UserRepository userRepo, @Lazy IRefreshTokenService self) {
 		this.refreshRepo = refreshRepo;
 		this.userRepo = userRepo;
+		this.self = self;
 	}
 
 	@Transactional
 	public RefreshToken storeOrRotate(String username, String token, LocalDateTime expiresAt) {
 		User user = userRepo.findByUsername(username)
 			.orElseGet(() -> userRepo.findByEmail(username).orElseThrow(() -> new IllegalArgumentException("User not found")));
+		// enforce single active refresh token per user by revoking existing ones
+		refreshRepo.revokeByUserId(Objects.requireNonNull(user.getId(), "user.id must not be null"));
 		RefreshToken rt = new RefreshToken();
 		rt.setUser(Objects.requireNonNull(user, "user must not be null"));
 		rt.setToken(token);
@@ -44,8 +50,19 @@ public class RefreshTokenService implements IRefreshTokenService {
 
 	@Transactional
 	public RefreshToken rotate(String oldToken, String newToken, LocalDateTime newExp, String username) {
+		User user = userRepo.findByUsername(username)
+			.orElseGet(() -> userRepo.findByEmail(username).orElseThrow(() -> new IllegalArgumentException("User not found")));
+		RefreshToken existing = refreshRepo.findByToken(oldToken)
+			.orElseThrow(() -> new IllegalArgumentException("Refresh token not found"));
+		// ownership and validity checks
+		if (!Objects.equals(existing.getUser().getId(), user.getId())) {
+			throw new AccessDeniedException("Refresh token does not belong to user");
+		}
+		if (existing.isRevoked() || existing.getExpiresAt() == null || !existing.getExpiresAt().isAfter(LocalDateTime.now())) {
+			throw new IllegalArgumentException("Refresh token is not valid for rotation");
+		}
 		refreshRepo.revoke(oldToken);
-		return storeOrRotate(username, newToken, newExp);
+		return self.storeOrRotate(username, newToken, newExp);
 	}
 
 	@Transactional

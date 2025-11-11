@@ -71,6 +71,52 @@ class PropertyDefineDetailsControllerIT extends PostgresTestContainer {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.message").value("Delete property define details successfully"));
 	}
+
+	@Test
+	@DisplayName("GET list returns meta and data; 404/409/400 cases")
+	void list_and_error_cases() throws Exception {
+		// create one
+		PropertyDefineDetailsCreateReq req = new PropertyDefineDetailsCreateReq();
+		req.setDetailName("defA");
+		req.setIsNumber(false);
+		req.setShowInHomePage(false);
+		mockMvc.perform(post("/api/property-define-details")
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(Objects.requireNonNull(mapper.writeValueAsString(req))))
+			.andExpect(status().isOk());
+		// list
+		mockMvc.perform(get("/api/property-define-details?page=0&size=5"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.meta.total").exists())
+			.andExpect(jsonPath("$.data.content").isArray());
+		// 404 get/update/delete not found
+		mockMvc.perform(get("/api/property-define-details/{id}", 999999))
+			.andExpect(status().isNotFound());
+		PropertyDefineDetailsUpdateReq up = new PropertyDefineDetailsUpdateReq();
+		up.setDetailName("X");
+		up.setIsNumber(false);
+		up.setShowInHomePage(false);
+		mockMvc.perform(put("/api/property-define-details/{id}", 999999)
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(Objects.requireNonNull(mapper.writeValueAsString(up))))
+			.andExpect(status().isNotFound());
+		mockMvc.perform(delete("/api/property-define-details/{id}", 999999))
+			.andExpect(status().isNotFound());
+		// 409 duplicate
+		PropertyDefineDetailsCreateReq dup = new PropertyDefineDetailsCreateReq();
+		dup.setDetailName("defA");
+		dup.setIsNumber(false);
+		dup.setShowInHomePage(false);
+		mockMvc.perform(post("/api/property-define-details")
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(Objects.requireNonNull(mapper.writeValueAsString(dup))))
+			.andExpect(status().isConflict());
+		// 400 validation missing
+		mockMvc.perform(post("/api/property-define-details")
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content("{}"))
+			.andExpect(status().isBadRequest());
+	}
 }
 
 

@@ -34,6 +34,13 @@ class UserRepositoryTest extends PostgresTestContainer {
 		assertThat(userRepository.findByEmail("u1@example.com"))
 			.isPresent().get().extracting(User::getRole).isNotNull();
 	}
+
+	@Test
+	@DisplayName("findByUsername/email non-existing returns empty")
+	void finders_not_found() {
+		assertThat(userRepository.findByUsername("unknown_" + System.nanoTime())).isNotPresent();
+		assertThat(userRepository.findByEmail("unknown_" + System.nanoTime() + "@ex.com")).isNotPresent();
+	}
 }
 
 

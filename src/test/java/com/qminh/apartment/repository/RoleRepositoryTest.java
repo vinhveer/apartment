@@ -23,6 +23,12 @@ class RoleRepositoryTest extends PostgresTestContainer {
 		roleRepository.saveAndFlush(r);
 		assertThat(roleRepository.findByRoleName(name)).isPresent();
 	}
+
+	@Test
+	@DisplayName("findByRoleName non-existing returns empty")
+	void find_by_name_not_found() {
+		assertThat(roleRepository.findByRoleName("NOT_EXIST_" + System.nanoTime())).isNotPresent();
+	}
 }
 
 

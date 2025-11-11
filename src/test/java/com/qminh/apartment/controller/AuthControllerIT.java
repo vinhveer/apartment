@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.qminh.apartment.dto.auth.LoginReq;
 import com.qminh.apartment.entity.Role;
 import com.qminh.apartment.entity.User;
+import com.qminh.apartment.repository.RefreshTokenRepository;
 import com.qminh.apartment.repository.RoleRepository;
 import com.qminh.apartment.repository.UserRepository;
 import com.qminh.apartment.testsupport.PostgresTestContainer;
@@ -27,6 +28,7 @@ class AuthControllerIT extends PostgresTestContainer {
 	@Autowired private MockMvc mockMvc;
 	@Autowired private ObjectMapper mapper;
 	@Autowired private PasswordEncoder passwordEncoder;
+	@Autowired private RefreshTokenRepository refreshTokenRepository;
 	@Autowired private RoleRepository roleRepository;
 	@Autowired private UserRepository userRepository;
 
@@ -75,6 +77,60 @@ class AuthControllerIT extends PostgresTestContainer {
 		mockMvc.perform(post("/api/auth/logout").cookie(loginRes.getCookies()))
 			.andExpect(status().isOk())
 			.andExpect(cookie().value("refresh_token", ""));
+	}
+
+	@Test
+	@DisplayName("login fails with 401 for wrong credentials; refresh fails without cookie; cookie attributes set")
+	void auth_negative_and_cookie_attrs() throws Exception {
+		LoginReq bad = new LoginReq();
+		bad.setUsername("vinh");
+		bad.setPassword("wrong");
+		mockMvc.perform(post("/api/auth/login")
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(mapper.writeValueAsString(bad)))
+			.andExpect(status().isUnauthorized());
+		// refresh without cookie
+		mockMvc.perform(post("/api/auth/refresh"))
+			.andExpect(status().isUnauthorized());
+		// login ok and assert cookie flags
+		LoginReq ok = new LoginReq();
+		ok.setUsername("vinh");
+		ok.setPassword("123456");
+		mockMvc.perform(post("/api/auth/login")
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(mapper.writeValueAsString(ok)))
+			.andExpect(status().isOk())
+			.andExpect(header().stringValues("Set-Cookie", org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("HttpOnly"))))
+			.andExpect(header().stringValues("Set-Cookie", org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("SameSite=Strict"))))
+			.andExpect(header().stringValues("Set-Cookie", org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("Path=/api/auth"))));
+		// logout without cookie is OK (idempotent)
+		mockMvc.perform(post("/api/auth/logout"))
+			.andExpect(status().isOk());
+	}
+	@Test
+	@DisplayName("login twice keeps only one active refresh token for user")
+	void login_twice_single_active_refresh_token() throws Exception {
+		LoginReq req = new LoginReq();
+		req.setUsername("vinh");
+		req.setPassword("123456");
+		// first login
+		mockMvc.perform(post("/api/auth/login")
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(mapper.writeValueAsString(req)))
+			.andExpect(status().isOk())
+			.andExpect(cookie().exists("refresh_token"));
+		// second login
+		mockMvc.perform(post("/api/auth/login")
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(mapper.writeValueAsString(req)))
+			.andExpect(status().isOk())
+			.andExpect(cookie().exists("refresh_token"));
+		var user = userRepository.findByUsername("vinh").orElseThrow();
+		long active = refreshTokenRepository.findAll().stream()
+			.filter(rt -> rt.getUser() != null && rt.getUser().getId().equals(user.getId()))
+			.filter(rt -> !rt.isRevoked())
+			.count();
+		org.assertj.core.api.Assertions.assertThat(active).isEqualTo(1);
 	}
 }
 

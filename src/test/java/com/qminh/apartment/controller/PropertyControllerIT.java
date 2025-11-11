@@ -120,6 +120,51 @@ class PropertyControllerIT extends PostgresTestContainer {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.message").value("Delete property successfully"));
 	}
+
+	@Test
+	@DisplayName("GET list returns meta and data; 404/400 cases")
+	void list_and_error_cases() throws Exception {
+		// create one valid property
+		PropertyCreateReq req = new PropertyCreateReq();
+		req.setTitle("List A");
+		req.setPrice(new BigDecimal("100.00"));
+		req.setDescription("d");
+		req.setTypeId(Objects.requireNonNull(typeId));
+		req.setSaleUserId(Objects.requireNonNull(saleUserId));
+		req.setAreaId(Objects.requireNonNull(areaId));
+		req.setIsPublic(true);
+		mockMvc.perform(post("/api/properties")
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(Objects.requireNonNull(mapper.writeValueAsString(req))))
+			.andExpect(status().isOk());
+		// list
+		mockMvc.perform(get("/api/properties?page=0&size=5"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.meta.total").exists())
+			.andExpect(jsonPath("$.data.content").isArray());
+		// 404 not found
+		mockMvc.perform(get("/api/properties/{id}", 999999))
+			.andExpect(status().isNotFound());
+		PropertyUpdateReq up = new PropertyUpdateReq();
+		up.setTitle("X");
+		up.setPrice(new BigDecimal("1.00"));
+		up.setDescription("d");
+		up.setTypeId(Objects.requireNonNull(typeId));
+		up.setSaleUserId(Objects.requireNonNull(saleUserId));
+		up.setAreaId(Objects.requireNonNull(areaId));
+		up.setIsPublic(false);
+		mockMvc.perform(put("/api/properties/{id}", 999999)
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(Objects.requireNonNull(mapper.writeValueAsString(up))))
+			.andExpect(status().isNotFound());
+		mockMvc.perform(delete("/api/properties/{id}", 999999))
+			.andExpect(status().isNotFound());
+		// 400 validation missing required fields
+		mockMvc.perform(post("/api/properties")
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content("{}"))
+			.andExpect(status().isBadRequest());
+	}
 }
 
 

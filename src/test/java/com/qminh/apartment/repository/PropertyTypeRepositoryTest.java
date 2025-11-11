@@ -42,4 +42,16 @@ class PropertyTypeRepositoryTest extends PostgresTestContainer {
 		assertThatThrownBy(() -> repository.saveAndFlush(t2))
 			.isInstanceOf(DataIntegrityViolationException.class);
 	}
+
+	@Test
+	@DisplayName("existsByTypeName true/false and edge cases")
+	void exists_by_type_name() {
+		PropertyType t = new PropertyType();
+		t.setTypeName("CondoX");
+		repository.saveAndFlush(t);
+		assertThat(repository.existsByTypeName("CondoX")).isTrue();
+		assertThat(repository.existsByTypeName("condox")).isFalse();
+		assertThat(repository.existsByTypeName(" CondoX ")).isFalse();
+		assertThat(repository.existsByTypeName("Unknown")).isFalse();
+	}
 }
