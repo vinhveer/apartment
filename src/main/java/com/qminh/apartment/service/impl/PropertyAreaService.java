@@ -29,7 +29,7 @@ public class PropertyAreaService implements IPropertyAreaService {
 	@Transactional
 	public PropertyAreaRes create(PropertyAreaCreateReq req) {
 		PropertyArea area = mapper.toEntity(req);
-		PropertyArea updated = repository.save(area);
+		PropertyArea updated = repository.save(Objects.requireNonNull(area, "area must not be null"));
 		PropertyArea saved = Objects.requireNonNull(updated, "updated must not be null");
 		return mapper.toRes(saved);
 	}
@@ -52,7 +52,7 @@ public class PropertyAreaService implements IPropertyAreaService {
 		PropertyArea area = repository.findById(id)
 			.orElseThrow(() -> new ResourceNotFoundException(NOT_FOUND + id));
 		mapper.updateEntityFromReq(req, area);
-		PropertyArea updated = repository.save(area);
+		PropertyArea updated = repository.save(Objects.requireNonNull(area, "area must not be null"));
 		return mapper.toRes(updated);
 	}
 

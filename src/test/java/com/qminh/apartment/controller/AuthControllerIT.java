@@ -18,6 +18,8 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.Objects;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -57,7 +59,7 @@ class AuthControllerIT extends PostgresTestContainer {
 
 		var loginRes = mockMvc.perform(post("/api/auth/login")
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
-				.content(mapper.writeValueAsString(req)))
+				.content(Objects.requireNonNull(mapper.writeValueAsString(req))))
 			.andExpect(status().isOk())
 			.andExpect(cookie().exists("refresh_token"))
 			.andExpect(jsonPath("$.data.accessToken").exists())
@@ -87,7 +89,7 @@ class AuthControllerIT extends PostgresTestContainer {
 		bad.setPassword("wrong");
 		mockMvc.perform(post("/api/auth/login")
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
-				.content(mapper.writeValueAsString(bad)))
+				.content(Objects.requireNonNull(mapper.writeValueAsString(bad))))
 			.andExpect(status().isUnauthorized());
 		// refresh without cookie
 		mockMvc.perform(post("/api/auth/refresh"))
@@ -98,11 +100,11 @@ class AuthControllerIT extends PostgresTestContainer {
 		ok.setPassword("123456");
 		mockMvc.perform(post("/api/auth/login")
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
-				.content(mapper.writeValueAsString(ok)))
+				.content(Objects.requireNonNull(mapper.writeValueAsString(ok))))
 			.andExpect(status().isOk())
-			.andExpect(header().stringValues("Set-Cookie", org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("HttpOnly"))))
-			.andExpect(header().stringValues("Set-Cookie", org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("SameSite=Strict"))))
-			.andExpect(header().stringValues("Set-Cookie", org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("Path=/api/auth"))));
+			.andExpect(header().stringValues("Set-Cookie", Objects.requireNonNull(org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("HttpOnly")))))
+			.andExpect(header().stringValues("Set-Cookie", Objects.requireNonNull(org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("SameSite=Strict")))))
+			.andExpect(header().stringValues("Set-Cookie", Objects.requireNonNull(org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("Path=/api/auth")))));
 		// logout without cookie is OK (idempotent)
 		mockMvc.perform(post("/api/auth/logout"))
 			.andExpect(status().isOk());
@@ -116,13 +118,13 @@ class AuthControllerIT extends PostgresTestContainer {
 		// first login
 		mockMvc.perform(post("/api/auth/login")
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
-				.content(mapper.writeValueAsString(req)))
+				.content(Objects.requireNonNull(mapper.writeValueAsString(req))))
 			.andExpect(status().isOk())
 			.andExpect(cookie().exists("refresh_token"));
 		// second login
 		mockMvc.perform(post("/api/auth/login")
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
-				.content(mapper.writeValueAsString(req)))
+				.content(Objects.requireNonNull(mapper.writeValueAsString(req))))
 			.andExpect(status().isOk())
 			.andExpect(cookie().exists("refresh_token"));
 		var user = userRepository.findByUsername("vinh").orElseThrow();

@@ -45,11 +45,11 @@ public class PropertyService implements IPropertyService {
 	@Transactional
 	public PropertyRes create(PropertyCreateReq req) {
 		Property entity = mapper.toEntity(req);
-		PropertyType type = typeRepository.findById(req.getTypeId())
+		PropertyType type = typeRepository.findById(Objects.requireNonNull(req.getTypeId()))
 			.orElseThrow(() -> new ResourceNotFoundException("Type not found: " + req.getTypeId()));
-		PropertySaleInfo sale = saleInfoRepository.findByUserId(req.getSaleUserId())
+		PropertySaleInfo sale = saleInfoRepository.findByUserId(Objects.requireNonNull(req.getSaleUserId()))
 			.orElseThrow(() -> new ResourceNotFoundException("Sale not found: " + req.getSaleUserId()));
-		PropertyArea area = areaRepository.findById(req.getAreaId())
+		PropertyArea area = areaRepository.findById(Objects.requireNonNull(req.getAreaId()))
 			.orElseThrow(() -> new ResourceNotFoundException("Area not found: " + req.getAreaId()));
 		entity.setType(type);
 		entity.setSaleInfo(sale);
@@ -76,11 +76,11 @@ public class PropertyService implements IPropertyService {
 		Property entity = repository.findById(id)
 			.orElseThrow(() -> new ResourceNotFoundException(NOT_FOUND + id));
 		mapper.updateEntityFromReq(req, entity);
-		PropertyType type = typeRepository.findById(req.getTypeId())
+		PropertyType type = typeRepository.findById(Objects.requireNonNull(req.getTypeId()))
 			.orElseThrow(() -> new ResourceNotFoundException("Type not found: " + req.getTypeId()));
-		PropertySaleInfo sale = saleInfoRepository.findByUserId(req.getSaleUserId())
+		PropertySaleInfo sale = saleInfoRepository.findByUserId(Objects.requireNonNull(req.getSaleUserId()))
 			.orElseThrow(() -> new ResourceNotFoundException("Sale not found: " + req.getSaleUserId()));
-		PropertyArea area = areaRepository.findById(req.getAreaId())
+		PropertyArea area = areaRepository.findById(Objects.requireNonNull(req.getAreaId()))
 			.orElseThrow(() -> new ResourceNotFoundException("Area not found: " + req.getAreaId()));
 		entity.setType(type);
 		entity.setSaleInfo(sale);

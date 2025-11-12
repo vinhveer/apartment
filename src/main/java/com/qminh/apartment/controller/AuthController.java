@@ -55,8 +55,8 @@ public class AuthController {
 			new UsernamePasswordAuthenticationToken(req.getUsername(), req.getPassword())
 		);
 		String username = auth.getName();
-		User user = userRepository.findByUsername(username)
-			.orElseGet(() -> userRepository.findByEmail(username).orElseThrow());
+		User user = userRepository.findByUsername(Objects.requireNonNull(username))
+			.orElseGet(() -> userRepository.findByEmail(Objects.requireNonNull(username)).orElseThrow());
 		List<String> authorities = List.of("ROLE_" + Objects.requireNonNull(user.getRole()).getRoleName().toUpperCase(Locale.ROOT));
 		String access = jwtService.generateAccess(user.getUsername(), authorities, ACCESS_TTL_MS);
 		String refresh = jwtService.generateRefresh(user.getUsername(), REFRESH_TTL_MS);
@@ -80,8 +80,8 @@ public class AuthController {
 			return ResponseEntity.status(401).body(ApiResponse.error("UNAUTHORIZED", "Invalid refresh token", null));
 		}
 		String username = jwtService.extractUsername(token);
-		User user = userRepository.findByUsername(username)
-			.orElseGet(() -> userRepository.findByEmail(username).orElseThrow());
+		User user = userRepository.findByUsername(Objects.requireNonNull(username))
+			.orElseGet(() -> userRepository.findByEmail(Objects.requireNonNull(username)).orElseThrow());
 		List<String> authorities = List.of("ROLE_" + Objects.requireNonNull(user.getRole()).getRoleName().toUpperCase(Locale.ROOT));
 		String newAccess = jwtService.generateAccess(user.getUsername(), authorities, ACCESS_TTL_MS);
 		String newRefresh = jwtService.generateRefresh(user.getUsername(), REFRESH_TTL_MS);
@@ -108,7 +108,7 @@ public class AuthController {
 			.secure(true)
 			.sameSite("Strict")
 			.path("/api/auth")
-			.maxAge(Duration.ofMillis(REFRESH_TTL_MS))
+			.maxAge(Objects.requireNonNull(Duration.ofMillis(REFRESH_TTL_MS)))
 			.build();
 		response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 	}

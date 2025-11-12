@@ -38,9 +38,9 @@ class PropertySaleInfoRepositoryTest extends PostgresTestContainer {
 		info.setPhone("0900000000");
 		saleInfoRepository.saveAndFlush(info);
 
-		assertThat(saleInfoRepository.findByUserId(u.getId())).isPresent();
-		saleInfoRepository.deleteByUserId(u.getId());
-		assertThat(saleInfoRepository.findByUserId(u.getId())).isNotPresent();
+		assertThat(saleInfoRepository.findByUserId(java.util.Objects.requireNonNull(u.getId()))).isPresent();
+		saleInfoRepository.deleteByUserId(java.util.Objects.requireNonNull(u.getId()));
+		assertThat(saleInfoRepository.findByUserId(java.util.Objects.requireNonNull(u.getId()))).isNotPresent();
 	}
 
 	@Test
@@ -55,7 +55,7 @@ class PropertySaleInfoRepositoryTest extends PostgresTestContainer {
 		u.setPassword("x");
 		u.setRole(role);
 		u = userRepository.saveAndFlush(u);
-		assertThat(saleInfoRepository.findByUserId(u.getId())).isNotPresent();
+		assertThat(saleInfoRepository.findByUserId(java.util.Objects.requireNonNull(u.getId()))).isNotPresent();
 		// no-op
 		saleInfoRepository.deleteByUserId(999999L);
 	}

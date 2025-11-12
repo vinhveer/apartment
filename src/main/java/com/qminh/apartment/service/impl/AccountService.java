@@ -17,6 +17,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Objects;
+
 @Service
 public class AccountService implements IAccountService {
 
@@ -42,10 +44,10 @@ public class AccountService implements IAccountService {
 	@Transactional
 	public UserRes createSale(SaleCreateReq req) {
 		// early duplicates check to return clear 409 CONFLICT instead of DB error
-		userRepository.findByUsername(req.getUsername()).ifPresent(u -> {
+		userRepository.findByUsername(Objects.requireNonNull(req.getUsername())).ifPresent(u -> {
 			throw new ConflictException("Username already exists: " + req.getUsername());
 		});
-		userRepository.findByEmail(req.getEmail()).ifPresent(u -> {
+		userRepository.findByEmail(Objects.requireNonNull(req.getEmail())).ifPresent(u -> {
 			throw new ConflictException("Email already exists: " + req.getEmail());
 		});
 		Role sale = roleRepository.findByRoleName("SALE").orElseThrow();
@@ -64,10 +66,10 @@ public class AccountService implements IAccountService {
 	@Transactional
 	public UserRes createAdmin(AdminCreateReq req) {
 		// early duplicates check to return clear 409 CONFLICT instead of DB error
-		userRepository.findByUsername(req.getUsername()).ifPresent(u -> {
+		userRepository.findByUsername(Objects.requireNonNull(req.getUsername())).ifPresent(u -> {
 			throw new ConflictException("Username already exists: " + req.getUsername());
 		});
-		userRepository.findByEmail(req.getEmail()).ifPresent(u -> {
+		userRepository.findByEmail(Objects.requireNonNull(req.getEmail())).ifPresent(u -> {
 			throw new ConflictException("Email already exists: " + req.getEmail());
 		});
 		Role admin = roleRepository.findByRoleName("ADMIN").orElseThrow();

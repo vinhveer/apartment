@@ -57,7 +57,7 @@ class PropertyRepositoryTest extends PostgresTestContainer {
 
 		Property saved = propertyRepository.saveAndFlush(p);
 		assertThat(Objects.requireNonNull(saved.getPropertyId())).isNotNull();
-		assertThat(propertyRepository.findById(saved.getPropertyId())).isPresent();
+		assertThat(propertyRepository.findById(Objects.requireNonNull(saved.getPropertyId()))).isPresent();
 	}
 
 	@Test

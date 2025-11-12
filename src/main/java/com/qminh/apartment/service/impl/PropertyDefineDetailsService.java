@@ -30,7 +30,7 @@ public class PropertyDefineDetailsService implements IPropertyDefineDetailsServi
 	@Transactional
 	public PropertyDefineDetailsRes create(PropertyDefineDetailsCreateReq req) {
 		PropertyDefineDetails entity = mapper.toEntity(req);
-		PropertyDefineDetails updated = repository.save(entity);
+		PropertyDefineDetails updated = repository.save(Objects.requireNonNull(entity, "entity must not be null"));
 		PropertyDefineDetails saved = Objects.requireNonNull(updated, "updated must not be null");
 		return mapper.toRes(saved);
 	}
@@ -53,7 +53,7 @@ public class PropertyDefineDetailsService implements IPropertyDefineDetailsServi
 		PropertyDefineDetails entity = repository.findById(id)
 			.orElseThrow(() -> new ResourceNotFoundException(NOT_FOUND + id));
 		mapper.updateEntityFromReq(req, entity);
-		PropertyDefineDetails updated = repository.save(entity);
+		PropertyDefineDetails updated = repository.save(Objects.requireNonNull(entity, "entity must not be null"));
 		return mapper.toRes(updated);
 	}
 

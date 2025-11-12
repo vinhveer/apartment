@@ -36,6 +36,8 @@ public class SecurityConfig {
 			.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.cors(Customizer.withDefaults())
 			.authorizeHttpRequests(reg -> reg
+				.requestMatchers(HttpMethod.POST, "/api/files").authenticated()
+				.requestMatchers(HttpMethod.GET, "/api/files/**").authenticated()
 				.requestMatchers(HttpMethod.POST, "/api/create-sale").authenticated()
 				.requestMatchers(HttpMethod.POST, "/api/create-admin").authenticated()
 				.requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()

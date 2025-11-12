@@ -30,7 +30,7 @@ public class PropertyTypeService implements IPropertyTypeService {
 	@Transactional
 	public PropertyTypeRes create(PropertyTypeCreateReq req) {
 		PropertyType type = mapper.toEntity(req);
-		PropertyType updated = repository.save(type);
+		PropertyType updated = repository.save(Objects.requireNonNull(type, "type must not be null"));
 		PropertyType saved = Objects.requireNonNull(updated, "updated must not be null");
 		return mapper.toRes(saved);
 	}
@@ -53,7 +53,7 @@ public class PropertyTypeService implements IPropertyTypeService {
 		PropertyType type = repository.findById(id)
 			.orElseThrow(() -> new ResourceNotFoundException(NOT_FOUND + id));
 		mapper.updateEntityFromReq(req, type);
-		PropertyType updated = repository.save(type);
+		PropertyType updated = repository.save(Objects.requireNonNull(type, "type must not be null"));
 		return mapper.toRes(updated);
 	}
 

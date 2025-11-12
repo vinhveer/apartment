@@ -40,7 +40,7 @@ public class UsersController {
 
 	@GetMapping("/me")
 	public ResponseEntity<ApiResponse<AuthRes.UserInfo>> me(Authentication authentication) {
-		var user = userRepository.findByUsername(authentication.getName())
+		var user = userRepository.findByUsername(Objects.requireNonNull(authentication.getName()))
 			.orElseThrow();
 		AuthRes.UserInfo info = new AuthRes.UserInfo();
 		info.setId(user.getId());

@@ -45,7 +45,7 @@ public class UsersService implements IUsersService {
 	public UserRes update(long id, UserUpdateReq req) {
 		User u = userRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException(NOT_FOUND + id));
 		userMapper.updateEntityFromReq(req, u);
-		User updated = userRepository.save(u);
+		User updated = userRepository.save(Objects.requireNonNull(u, "user must not be null"));
 		return userMapper.toRes(updated);
 	}
 

@@ -68,8 +68,8 @@ class RefreshTokenRepositoryTest extends PostgresTestContainer {
 		String tb1 = "b1_" + UUID.randomUUID(); saveToken(ub, tb1, LocalDateTime.now().plusDays(1), false);
 
 		// idempotent and affects only A
-		repo.revokeByUserId(ua.getId());
-		repo.revokeByUserId(ua.getId());
+		repo.revokeByUserId(java.util.Objects.requireNonNull(ua.getId()));
+		repo.revokeByUserId(java.util.Objects.requireNonNull(ua.getId()));
 		assertThat(repo.findByToken(ta1)).isPresent().get().extracting(RefreshToken::isRevoked).isEqualTo(true);
 		assertThat(repo.findByToken(ta2)).isPresent().get().extracting(RefreshToken::isRevoked).isEqualTo(true);
 		assertThat(repo.findByToken(ta3)).isPresent().get().extracting(RefreshToken::isRevoked).isEqualTo(true);

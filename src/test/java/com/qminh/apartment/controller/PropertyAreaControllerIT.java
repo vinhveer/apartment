@@ -72,7 +72,7 @@ class PropertyAreaControllerIT extends PostgresTestContainer {
 		req.setAreaLink("la");
 		mockMvc.perform(post("/api/areas")
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
-				.content(mapper.writeValueAsString(req)))
+				.content(Objects.requireNonNull(mapper.writeValueAsString(req))))
 			.andExpect(status().isOk());
 		// list
 		mockMvc.perform(get("/api/areas?page=0&size=5"))
@@ -87,7 +87,7 @@ class PropertyAreaControllerIT extends PostgresTestContainer {
 		up.setAreaLink("y");
 		mockMvc.perform(put("/api/areas/{id}", 999999)
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
-				.content(mapper.writeValueAsString(up)))
+				.content(Objects.requireNonNull(mapper.writeValueAsString(up))))
 			.andExpect(status().isNotFound());
 		mockMvc.perform(delete("/api/areas/{id}", 999999))
 			.andExpect(status().isNotFound());
@@ -97,7 +97,7 @@ class PropertyAreaControllerIT extends PostgresTestContainer {
 		dup.setAreaLink("other");
 		mockMvc.perform(post("/api/areas")
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
-				.content(mapper.writeValueAsString(dup)))
+				.content(Objects.requireNonNull(mapper.writeValueAsString(dup))))
 			.andExpect(status().isConflict());
 		// 400 validation missing
 		mockMvc.perform(post("/api/areas")

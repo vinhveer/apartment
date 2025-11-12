@@ -1,0 +1,225 @@
+package com.qminh.apartment.service.impl;
+
+import com.qminh.apartment.entity.StoredFileMeta;
+import com.qminh.apartment.entity.StoredFileVariant;
+import com.qminh.apartment.repository.StoredFileMetaRepository;
+import com.qminh.apartment.repository.StoredFileVariantRepository;
+import com.qminh.apartment.service.IFileService;
+import com.qminh.apartment.storage.StoragePort;
+import net.coobird.thumbnailator.Thumbnails;
+import org.apache.tika.Tika;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+
+@Service
+public class FileService implements IFileService {
+
+	private static final String MIME_JPEG = "image/jpeg";
+	private static final String MIME_PNG = "image/png";
+	private static final String MIME_WEBP = "image/webp";
+	private static final String MIME_PDF = "application/pdf";
+	private static final String ACCESS_PRIVATE = "PRIVATE";
+	private static final String ACCESS_PUBLIC = "PUBLIC";
+
+	private static final List<String> ALLOWED_MIME = List.of(
+		MIME_JPEG, MIME_PNG, MIME_WEBP, MIME_PDF
+	);
+	private static final List<String> IMAGE_MIME = List.of(
+		MIME_JPEG, MIME_PNG, MIME_WEBP
+	);
+	private static final Map<String, String> MIME_TO_EXT = Map.of(
+		MIME_JPEG, "jpg",
+		MIME_PNG, "png",
+		MIME_WEBP, "webp",
+		MIME_PDF, "pdf"
+	);
+	private static final List<VariantSpec> VARIANTS = List.of(
+		new VariantSpec("thumb_200", 200),
+		new VariantSpec("list_600", 600),
+		new VariantSpec("detail_1200", 1200)
+	);
+
+	private record VariantSpec(String key, int width) {}
+
+	private final Tika tika = new Tika();
+	private final StoragePort storage;
+	private final StoredFileMetaRepository fileRepo;
+	private final StoredFileVariantRepository variantRepo;
+
+	public FileService(StoragePort storage, StoredFileMetaRepository fileRepo, StoredFileVariantRepository variantRepo) {
+		this.storage = storage;
+		this.fileRepo = fileRepo;
+		this.variantRepo = variantRepo;
+	}
+
+	@Transactional
+	public StoredFileMeta upload(MultipartFile file, String accessLevel) {
+		try {
+			Objects.requireNonNull(file, "file must not be null");
+			String normalizedAccess = normalizeAccess(accessLevel);
+			// 1) Write to temp and detect MIME
+			Path tempFile = Files.createTempFile("upload_", ".bin");
+			File tmpAsFile = Objects.requireNonNull(tempFile.toFile());
+			file.transferTo(tmpAsFile);
+			String mime = tika.detect(tmpAsFile);
+			if (!ALLOWED_MIME.contains(mime)) {
+				Files.deleteIfExists(tempFile);
+				throw new IllegalArgumentException("Unsupported MIME type: " + mime);
+			}
+			long sizeBytes = Files.size(tempFile);
+
+			// 2) Compute sha256 for de-dup and decide stored name
+			String sha256 = Objects.requireNonNull(computeSha256(tmpAsFile));
+			var existing = fileRepo.findBySha256(sha256);
+			if (existing.isPresent()) {
+				Files.deleteIfExists(tempFile);
+				return existing.get();
+			}
+			String originalName = sanitizeOriginalName(file.getOriginalFilename());
+			String ext = pickExtension(originalName, mime);
+			String shortHash = sha256.substring(0, 12);
+			String storedName = shortHash + "." + ext;
+			String subdir = buildSubdir(normalizedAccess);
+
+			// 3) Save original to storage
+			try (FileInputStream fis = new FileInputStream(tmpAsFile)) {
+				storage.save(fis, storedName, subdir);
+			}
+			Files.deleteIfExists(tempFile);
+
+			// 4) Persist meta
+			StoredFileMeta meta = new StoredFileMeta();
+			meta.setOriginalName(originalName);
+			meta.setStoredName(storedName);
+			meta.setExt(ext);
+			meta.setMimeType(mime);
+			meta.setSizeBytes(sizeBytes);
+			meta.setSha256(sha256);
+			meta.setAccessLevel(normalizedAccess);
+			meta.setLocation("LOCAL");
+			meta.setRelativePath(subdir + "/" + storedName);
+			meta = fileRepo.save(meta);
+
+			// 5) Generate variants for images
+			if (IMAGE_MIME.contains(mime)) {
+				generateVariants(meta, mime);
+			}
+			return meta;
+		} catch (IOException e) {
+			throw new IllegalStateException("Upload failed", e);
+		}
+	}
+
+	private void generateVariants(StoredFileMeta meta, String mime) throws IOException {
+		// load original file from storage
+		// We do not know absolute base; open via storage.load(relative)
+		try (var is = storage.load(meta.getRelativePath())) {
+			BufferedImage src = ImageIO.read(is);
+			if (src == null) return;
+			for (VariantSpec spec : VARIANTS) {
+				BufferedImage out = scaleToWidth(src, spec.width());
+				String ext = MIME_TO_EXT.getOrDefault(mime, "jpg");
+				String variantStoredName = meta.getStoredName().replace("." + meta.getExt(), "") + "_" + spec.key() + "." + ext;
+				String variantSubdir = parentDir(meta.getRelativePath());
+				Path tmp = Files.createTempFile("variant_", "." + ext);
+				ImageIO.write(out, ext, tmp.toFile());
+				long size = Files.size(tmp);
+				try (var fis = new FileInputStream(tmp.toFile())) {
+					StoragePort.SaveResult saved = storage.save(fis, variantStoredName, variantSubdir);
+					StoredFileVariant v = new StoredFileVariant();
+					v.setFile(meta);
+					v.setVariantKey(spec.key());
+					v.setMimeType(mime);
+					v.setSizeBytes(size);
+					v.setWidth(out.getWidth());
+					v.setHeight(out.getHeight());
+					v.setRelativePath(saved.relativePath());
+					variantRepo.save(v);
+				} finally {
+					Files.deleteIfExists(tmp);
+				}
+			}
+		}
+	}
+
+	private static BufferedImage scaleToWidth(BufferedImage src, int targetW) throws IOException {
+		if (src.getWidth() <= targetW) {
+			return src;
+		}
+		return Thumbnails.of(src).width(targetW).keepAspectRatio(true).asBufferedImage();
+	}
+
+	private static String parentDir(String relativePath) {
+		int idx = relativePath.lastIndexOf('/');
+		if (idx <= 0) return "";
+		return relativePath.substring(0, idx);
+	}
+
+	private static String sanitizeOriginalName(String name) {
+		if (name == null) return "unknown";
+		String onlyName = name.replace("\\", "/");
+		int idx = onlyName.lastIndexOf('/');
+		if (idx >= 0) onlyName = onlyName.substring(idx + 1);
+		return onlyName.trim();
+	}
+
+	private static String pickExtension(String originalName, String mime) {
+		String ext = null;
+		int dot = originalName.lastIndexOf('.');
+		if (dot > 0 && dot < originalName.length() - 1) {
+			ext = originalName.substring(dot + 1).toLowerCase(Locale.ROOT);
+		}
+		if (ext == null || ext.isBlank()) {
+			ext = MIME_TO_EXT.getOrDefault(mime, "bin");
+		}
+		return ext;
+	}
+
+	private static String buildSubdir(String accessLevel) {
+		LocalDate d = LocalDate.now();
+		return (ACCESS_PRIVATE.equals(accessLevel) ? "private" : "public") + "/" +
+			String.format("%04d/%02d", d.getYear(), d.getMonthValue());
+	}
+
+	private static String computeSha256(File f) throws IOException {
+		try {
+			MessageDigest md = MessageDigest.getInstance("SHA-256");
+			try (var is = Files.newInputStream(f.toPath())) {
+				is.transferTo(new java.io.OutputStream() {
+					@Override public void write(int b) throws IOException { md.update((byte) b); }
+					@Override public void write(byte[] b, int off, int len) { md.update(b, off, len); }
+				});
+			}
+			byte[] hash = md.digest();
+			StringBuilder sb = new StringBuilder();
+			for (byte b : hash) sb.append(String.format("%02x", b));
+			return sb.toString();
+		} catch (NoSuchAlgorithmException e) {
+			throw new IOException("SHA-256 not available", e);
+		}
+	}
+
+	private static String normalizeAccess(String access) {
+		if (access == null) return ACCESS_PUBLIC;
+		String a = access.trim().toUpperCase(Locale.ROOT);
+		return (ACCESS_PRIVATE.equals(a) ? ACCESS_PRIVATE : ACCESS_PUBLIC);
+	}
+}
+
+

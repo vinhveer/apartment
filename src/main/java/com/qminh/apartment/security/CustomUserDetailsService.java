@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
@@ -21,8 +22,8 @@ public class CustomUserDetailsService implements UserDetailsService {
 
 	@Override
 	public UserDetails loadUserByUsername(String usernameOrEmail) throws UsernameNotFoundException {
-		var user = userRepository.findByUsername(usernameOrEmail)
-			.orElseGet(() -> userRepository.findByEmail(usernameOrEmail)
+		var user = userRepository.findByUsername(Objects.requireNonNull(usernameOrEmail))
+			.orElseGet(() -> userRepository.findByEmail(Objects.requireNonNull(usernameOrEmail))
 				.orElseThrow(() -> new UsernameNotFoundException("User not found")));
 		var roleName = user.getRole() != null ? user.getRole().getRoleName() : "USER";
 		var auth = new SimpleGrantedAuthority("ROLE_" + roleName.toUpperCase(Locale.ROOT));

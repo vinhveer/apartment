@@ -85,7 +85,7 @@ class PropertyAreaRepositoryTest extends PostgresTestContainer {
 		String link = "area-l-" + System.nanoTime();
 		newArea("Area L", link);
 		assertThat(repository.findByAreaLink(link)).isPresent();
-		assertThat(repository.findByAreaLink(link.toUpperCase())).isNotPresent();
+		assertThat(repository.findByAreaLink(Objects.requireNonNull(link.toUpperCase()))).isNotPresent();
 		assertThat(repository.findByAreaLink(" " + link + " ")).isNotPresent();
 		assertThat(repository.findByAreaLink("not-exist")).isNotPresent();
 	}

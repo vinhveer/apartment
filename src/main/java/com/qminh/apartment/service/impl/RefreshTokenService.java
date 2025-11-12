@@ -28,8 +28,8 @@ public class RefreshTokenService implements IRefreshTokenService {
 
 	@Transactional
 	public RefreshToken storeOrRotate(String username, String token, LocalDateTime expiresAt) {
-		User user = userRepo.findByUsername(username)
-			.orElseGet(() -> userRepo.findByEmail(username).orElseThrow(() -> new IllegalArgumentException("User not found")));
+		User user = userRepo.findByUsername(Objects.requireNonNull(username))
+			.orElseGet(() -> userRepo.findByEmail(Objects.requireNonNull(username)).orElseThrow(() -> new IllegalArgumentException("User not found")));
 		// enforce single active refresh token per user by revoking existing ones
 		refreshRepo.revokeByUserId(Objects.requireNonNull(user.getId(), "user.id must not be null"));
 		RefreshToken rt = new RefreshToken();
@@ -42,7 +42,7 @@ public class RefreshTokenService implements IRefreshTokenService {
 
 	@Transactional(readOnly = true)
 	public boolean isValid(String token) {
-		return refreshRepo.findByToken(token)
+		return refreshRepo.findByToken(Objects.requireNonNull(token))
 			.filter(rt -> !rt.isRevoked())
 			.filter(rt -> rt.getExpiresAt() != null && rt.getExpiresAt().isAfter(LocalDateTime.now()))
 			.isPresent();
@@ -50,9 +50,9 @@ public class RefreshTokenService implements IRefreshTokenService {
 
 	@Transactional
 	public RefreshToken rotate(String oldToken, String newToken, LocalDateTime newExp, String username) {
-		User user = userRepo.findByUsername(username)
-			.orElseGet(() -> userRepo.findByEmail(username).orElseThrow(() -> new IllegalArgumentException("User not found")));
-		RefreshToken existing = refreshRepo.findByToken(oldToken)
+		User user = userRepo.findByUsername(Objects.requireNonNull(username))
+			.orElseGet(() -> userRepo.findByEmail(Objects.requireNonNull(username)).orElseThrow(() -> new IllegalArgumentException("User not found")));
+		RefreshToken existing = refreshRepo.findByToken(Objects.requireNonNull(oldToken))
 			.orElseThrow(() -> new IllegalArgumentException("Refresh token not found"));
 		// ownership and validity checks
 		if (!Objects.equals(existing.getUser().getId(), user.getId())) {
@@ -61,13 +61,13 @@ public class RefreshTokenService implements IRefreshTokenService {
 		if (existing.isRevoked() || existing.getExpiresAt() == null || !existing.getExpiresAt().isAfter(LocalDateTime.now())) {
 			throw new IllegalArgumentException("Refresh token is not valid for rotation");
 		}
-		refreshRepo.revoke(oldToken);
+		refreshRepo.revoke(Objects.requireNonNull(oldToken));
 		return self.storeOrRotate(username, newToken, newExp);
 	}
 
 	@Transactional
 	public void revoke(String token) {
-		refreshRepo.revoke(token);
+		refreshRepo.revoke(Objects.requireNonNull(token));
 	}
 }
 

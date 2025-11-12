@@ -38,7 +38,7 @@ class CustomUserDetailsServiceTest extends PostgresTestContainer {
 		});
 		username = "udstest";
 		email = "udstest@example.com";
-		if (userRepository.findByUsername(username).isEmpty()) {
+		if (userRepository.findByUsername(java.util.Objects.requireNonNull(username)).isEmpty()) {
 			User u = new User();
 			u.setUsername(username);
 			u.setEmail(email);

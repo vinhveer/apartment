@@ -19,6 +19,8 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.Objects;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -69,7 +71,7 @@ class AccountControllerIT extends PostgresTestContainer {
 		req.setPassword("123456");
 		var res = mockMvc.perform(post("/api/auth/login")
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
-				.content(mapper.writeValueAsString(req)))
+				.content(Objects.requireNonNull(mapper.writeValueAsString(req))))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.accessToken").exists())
 			.andReturn().getResponse().getContentAsString();
@@ -82,7 +84,7 @@ class AccountControllerIT extends PostgresTestContainer {
 		req.setPassword("123456");
 		var res = mockMvc.perform(post("/api/auth/login")
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
-				.content(mapper.writeValueAsString(req)))
+				.content(Objects.requireNonNull(mapper.writeValueAsString(req))))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.accessToken").exists())
 			.andReturn().getResponse().getContentAsString();
@@ -105,7 +107,7 @@ class AccountControllerIT extends PostgresTestContainer {
 		mockMvc.perform(post("/api/create-sale")
 				.header("Authorization", "Bearer " + access)
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
-				.content(mapper.writeValueAsString(sale)))
+				.content(Objects.requireNonNull(mapper.writeValueAsString(sale))))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.message").value("Create sale account successfully"))
 			.andExpect(jsonPath("$.data.username").value("sale02"));
@@ -119,7 +121,7 @@ class AccountControllerIT extends PostgresTestContainer {
 		mockMvc.perform(post("/api/create-admin")
 				.header("Authorization", "Bearer " + access)
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
-				.content(mapper.writeValueAsString(admin)))
+				.content(Objects.requireNonNull(mapper.writeValueAsString(admin))))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.message").value("Create admin account successfully"))
 			.andExpect(jsonPath("$.data.username").value("admin02"));
@@ -137,7 +139,7 @@ class AccountControllerIT extends PostgresTestContainer {
 		mockMvc.perform(post("/api/create-admin")
 				.header("Authorization", "Bearer " + access)
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
-				.content(mapper.writeValueAsString(admin)))
+				.content(Objects.requireNonNull(mapper.writeValueAsString(admin))))
 			.andExpect(status().isForbidden());
 	}
 
@@ -153,7 +155,7 @@ class AccountControllerIT extends PostgresTestContainer {
 		sale.setPhone("0900");
 		mockMvc.perform(post("/api/create-sale")
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
-				.content(mapper.writeValueAsString(sale)))
+				.content(Objects.requireNonNull(mapper.writeValueAsString(sale))))
 			.andExpect(status().isForbidden());
 	}
 
@@ -165,7 +167,7 @@ class AccountControllerIT extends PostgresTestContainer {
 		mockMvc.perform(post("/api/create-sale")
 				.header("Authorization", "Bearer " + access)
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
-				.content(mapper.writeValueAsString(sale)))
+				.content(Objects.requireNonNull(mapper.writeValueAsString(sale))))
 			.andExpect(status().isBadRequest());
 	}
 
@@ -183,13 +185,13 @@ class AccountControllerIT extends PostgresTestContainer {
 		mockMvc.perform(post("/api/create-sale")
 				.header("Authorization", "Bearer " + access)
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
-				.content(mapper.writeValueAsString(sale)))
+				.content(Objects.requireNonNull(mapper.writeValueAsString(sale))))
 			.andExpect(status().isOk());
 		// duplicate
 		mockMvc.perform(post("/api/create-sale")
 				.header("Authorization", "Bearer " + access)
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
-				.content(mapper.writeValueAsString(sale)))
+				.content(Objects.requireNonNull(mapper.writeValueAsString(sale))))
 			.andExpect(status().isConflict());
 	}
 }

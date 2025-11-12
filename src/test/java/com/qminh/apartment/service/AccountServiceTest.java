@@ -54,7 +54,7 @@ class AccountServiceTest extends PostgresTestContainer {
 		var res = service.createSale(req);
 		assertThat(res.getUsername()).isEqualTo("saleT");
 		var u = userRepository.findByUsername("saleT").orElseThrow();
-		assertThat(saleInfoRepository.findByUserId(u.getId())).isPresent();
+		assertThat(saleInfoRepository.findByUserId(java.util.Objects.requireNonNull(u.getId()))).isPresent();
 	}
 
 	@Test

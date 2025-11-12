@@ -18,6 +18,8 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.Objects;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -78,7 +80,7 @@ class UsersControllerIT extends PostgresTestContainer {
 		req.setPassword("123456");
 		var res = mockMvc.perform(post("/api/auth/login")
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
-				.content(mapper.writeValueAsString(req)))
+				.content(Objects.requireNonNull(mapper.writeValueAsString(req))))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.accessToken").exists())
 			.andReturn().getResponse().getContentAsString();
@@ -91,7 +93,7 @@ class UsersControllerIT extends PostgresTestContainer {
 		req.setPassword("123456");
 		var res = mockMvc.perform(post("/api/auth/login")
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
-				.content(mapper.writeValueAsString(req)))
+				.content(Objects.requireNonNull(mapper.writeValueAsString(req))))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.accessToken").exists())
 			.andReturn().getResponse().getContentAsString();
@@ -122,7 +124,7 @@ class UsersControllerIT extends PostgresTestContainer {
 		mockMvc.perform(put("/api/users/{id}", createdUserId)
 				.header("Authorization", "Bearer " + access)
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
-				.content(mapper.writeValueAsString(up)))
+				.content(Objects.requireNonNull(mapper.writeValueAsString(up))))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.message").value("Update user successfully"))
 			.andExpect(jsonPath("$.data.displayName").value("User A New"));
@@ -162,7 +164,7 @@ class UsersControllerIT extends PostgresTestContainer {
 		mockMvc.perform(put("/api/users/{id}", 999999)
 				.header("Authorization", "Bearer " + access)
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
-				.content(mapper.writeValueAsString(up)))
+				.content(Objects.requireNonNull(mapper.writeValueAsString(up))))
 			.andExpect(status().isNotFound());
 		mockMvc.perform(delete("/api/users/{id}", 999999)
 				.header("Authorization", "Bearer " + access))
@@ -178,7 +180,7 @@ class UsersControllerIT extends PostgresTestContainer {
 		mockMvc.perform(put("/api/users/{id}", createdUserId)
 				.header("Authorization", "Bearer " + access)
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
-				.content(mapper.writeValueAsString(up)))
+				.content(Objects.requireNonNull(mapper.writeValueAsString(up))))
 			.andExpect(status().isBadRequest());
 	}
 }
