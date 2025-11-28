@@ -1,0 +1,113 @@
+### Create employee account (ADMIN/SALE)
+POST http://localhost:8080/api/create-employee-account
+Content-Type: application/json
+Authorization: Bearer {{ACCESS_TOKEN}}
+
+{
+	"username": "sale01",
+	"email": "sale01@example.com",
+	"password": "123456",
+	"displayName": "Employee 01",
+	"fullName": "Employee Person 01",
+	"phone": "0900000001",
+	"roleName": "SALE" // or "ADMIN"
+}
+
+# Response 200
+# {
+#   "message": "Create employee account successfully",
+#   "data": {
+#     "id": 1,
+#     "username": "sale01",
+#     "email": "sale01@example.com",
+#     "displayName": "Employee 01",
+#     "roleName": "SALE",
+#     "fullName": "Employee Person 01",
+#     "phone": "0900000001"
+#   },
+#   "meta": null,
+#   "error": null
+# }
+#
+### Change employee role (ADMIN)
+PUT http://localhost:8080/api/accounts/employees/1/role
+Content-Type: application/json
+Authorization: Bearer {{ACCESS_TOKEN}}
+
+{
+	"roleName": "ADMIN"
+}
+
+# Response 200
+# {
+#   "message": "Update employee role successfully",
+#   "data": {
+#     "id": 1,
+#     "username": "sale01",
+#     "email": "sale01@example.com",
+#     "displayName": "Sale 01",
+#     "roleName": "ADMIN"
+#   },
+#   "meta": null,
+#   "error": null
+# }
+#
+### Get employee accounts (ADMIN, with search)
+GET http://localhost:8080/api/accounts/employees?page=0&size=10&q=sale
+Authorization: Bearer {{ACCESS_TOKEN}}
+
+# Response 200
+# {
+#   "message": "Employee account list",
+#   "data": [
+#     {
+#       "id": 20,
+#       "username": "sale01",
+#       "email": "sale01@example.com",
+#       "displayName": "Sale 01",
+#       "roleName": "SALE",
+#       "fullName": "Sale Person 01",
+#       "phone": "0900000001"
+#     }
+#   ],
+#   "meta": { "page": 0, "size": 10, "total": 1 },
+#   "error": null
+# }
+#
+### Edit employee account (ADMIN)
+PUT http://localhost:8080/api/accounts/employees/1
+Content-Type: application/json
+Authorization: Bearer {{ACCESS_TOKEN}}
+
+{
+	"email": "sale01+new@example.com",
+	"displayName": "Sale 01 New"
+}
+
+# Response 200
+# {
+#   "message": "Update employee account successfully",
+#   "data": {
+#     "id": 20,
+#     "username": "sale01",
+#     "email": "sale01+new@example.com",
+#     "displayName": "Sale 01 New",
+#     "roleName": "SALE"
+#   },
+#   "meta": null,
+#   "error": null
+# }
+#
+### Delete employee account (ADMIN)
+DELETE http://localhost:8080/api/accounts/employees/1
+Authorization: Bearer {{ACCESS_TOKEN}}
+
+# Response 200
+# {
+#   "message": "Delete employee account successfully",
+#   "data": null,
+#   "meta": null,
+#   "error": null
+# }
+
+

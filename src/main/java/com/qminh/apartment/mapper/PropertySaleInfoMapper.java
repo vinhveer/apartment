@@ -1,6 +1,6 @@
 package com.qminh.apartment.mapper;
 
-import com.qminh.apartment.dto.account.SaleCreateReq;
+import com.qminh.apartment.dto.account.AccountCreateReq;
 import com.qminh.apartment.entity.PropertySaleInfo;
 import org.mapstruct.*;
 
@@ -14,7 +14,7 @@ public interface PropertySaleInfoMapper {
 	@Mapping(target = "user", ignore = true)
 	@Mapping(target = "createdAt", ignore = true)
 	@Mapping(target = "updatedAt", ignore = true)
-	PropertySaleInfo toEntity(SaleCreateReq req);
+	PropertySaleInfo toEntity(AccountCreateReq req);
 }
 
 

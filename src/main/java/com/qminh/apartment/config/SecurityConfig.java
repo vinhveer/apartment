@@ -37,7 +37,7 @@ public class SecurityConfig {
 			.cors(Customizer.withDefaults())
 			.authorizeHttpRequests(reg -> reg
 				.requestMatchers(HttpMethod.POST, "/api/files").authenticated()
-				.requestMatchers(HttpMethod.GET, "/api/files/**").authenticated()
+				.requestMatchers(HttpMethod.GET, "/api/files/**").permitAll()
 				.requestMatchers(HttpMethod.POST, "/api/create-sale").authenticated()
 				.requestMatchers(HttpMethod.POST, "/api/create-admin").authenticated()
 				.requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()

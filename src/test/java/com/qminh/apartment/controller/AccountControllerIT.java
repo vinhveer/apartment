@@ -1,8 +1,7 @@
 package com.qminh.apartment.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.qminh.apartment.dto.account.AdminCreateReq;
-import com.qminh.apartment.dto.account.SaleCreateReq;
+import com.qminh.apartment.dto.account.AccountCreateReq;
 import com.qminh.apartment.dto.auth.LoginReq;
 import com.qminh.apartment.entity.Role;
 import com.qminh.apartment.entity.User;
@@ -92,51 +91,54 @@ class AccountControllerIT extends PostgresTestContainer {
 	}
 
 	@Test
-	@DisplayName("create sale and admin accounts")
+	@DisplayName("create employee accounts via unified endpoint")
 	void create_accounts() throws Exception {
 		String access = loginAsRoot();
 
-		SaleCreateReq sale = new SaleCreateReq();
+		AccountCreateReq sale = new AccountCreateReq();
 		sale.setUsername("sale02");
 		sale.setEmail("sale02@example.com");
 		sale.setPassword("123456");
 		sale.setDisplayName("Sale 02");
 		sale.setFullName("Sale Person 02");
 		sale.setPhone("0900000002");
+		sale.setRoleName("SALE");
 
-		mockMvc.perform(post("/api/create-sale")
+		mockMvc.perform(post("/api/create-employee-account")
 				.header("Authorization", "Bearer " + access)
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
 				.content(Objects.requireNonNull(mapper.writeValueAsString(sale))))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.message").value("Create sale account successfully"))
+			.andExpect(jsonPath("$.message").value("Create employee account successfully"))
 			.andExpect(jsonPath("$.data.username").value("sale02"));
 
-		AdminCreateReq admin = new AdminCreateReq();
+		AccountCreateReq admin = new AccountCreateReq();
 		admin.setUsername("admin02");
 		admin.setEmail("admin02@example.com");
 		admin.setPassword("123456");
 		admin.setDisplayName("Admin 02");
+		admin.setRoleName("ADMIN");
 
-		mockMvc.perform(post("/api/create-admin")
+		mockMvc.perform(post("/api/create-employee-account")
 				.header("Authorization", "Bearer " + access)
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
 				.content(Objects.requireNonNull(mapper.writeValueAsString(admin))))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.message").value("Create admin account successfully"))
+			.andExpect(jsonPath("$.message").value("Create employee account successfully"))
 			.andExpect(jsonPath("$.data.username").value("admin02"));
 	}
 
 	@Test
-	@DisplayName("non-admin cannot create accounts (403)")
+	@DisplayName("non-admin cannot create employee accounts (403)")
 	void non_admin_forbidden() throws Exception {
 		String access = loginAsUser();
-		AdminCreateReq admin = new AdminCreateReq();
+		AccountCreateReq admin = new AccountCreateReq();
 		admin.setUsername("admin03");
 		admin.setEmail("admin03@example.com");
 		admin.setPassword("123456");
 		admin.setDisplayName("Admin 03");
-		mockMvc.perform(post("/api/create-admin")
+		admin.setRoleName("ADMIN");
+		mockMvc.perform(post("/api/create-employee-account")
 				.header("Authorization", "Bearer " + access)
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
 				.content(Objects.requireNonNull(mapper.writeValueAsString(admin))))
@@ -146,14 +148,15 @@ class AccountControllerIT extends PostgresTestContainer {
 	@Test
 	@DisplayName("401 when missing Authorization header")
 	void unauthorized_when_no_bearer() throws Exception {
-		SaleCreateReq sale = new SaleCreateReq();
+		AccountCreateReq sale = new AccountCreateReq();
 		sale.setUsername("sale401");
 		sale.setEmail("sale401@example.com");
 		sale.setPassword("123456");
 		sale.setDisplayName("Sale 401");
 		sale.setFullName("S401");
 		sale.setPhone("0900");
-		mockMvc.perform(post("/api/create-sale")
+		sale.setRoleName("SALE");
+		mockMvc.perform(post("/api/create-employee-account")
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
 				.content(Objects.requireNonNull(mapper.writeValueAsString(sale))))
 			.andExpect(status().isForbidden());
@@ -163,8 +166,8 @@ class AccountControllerIT extends PostgresTestContainer {
 	@DisplayName("400 validation error when required fields missing")
 	void create_sale_validation_error() throws Exception {
 		String access = loginAsRoot();
-		SaleCreateReq sale = new SaleCreateReq(); // missing all fields
-		mockMvc.perform(post("/api/create-sale")
+		AccountCreateReq sale = new AccountCreateReq(); // missing all fields
+		mockMvc.perform(post("/api/create-employee-account")
 				.header("Authorization", "Bearer " + access)
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
 				.content(Objects.requireNonNull(mapper.writeValueAsString(sale))))
@@ -175,20 +178,21 @@ class AccountControllerIT extends PostgresTestContainer {
 	@DisplayName("409 conflict when creating duplicate username/email")
 	void conflict_on_duplicate() throws Exception {
 		String access = loginAsRoot();
-		SaleCreateReq sale = new SaleCreateReq();
+		AccountCreateReq sale = new AccountCreateReq();
 		sale.setUsername("dupUser");
 		sale.setEmail("dup@example.com");
 		sale.setPassword("123456");
 		sale.setDisplayName("Dup");
 		sale.setFullName("Dup Full");
 		sale.setPhone("0900");
-		mockMvc.perform(post("/api/create-sale")
+		sale.setRoleName("SALE");
+		mockMvc.perform(post("/api/create-employee-account")
 				.header("Authorization", "Bearer " + access)
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
 				.content(Objects.requireNonNull(mapper.writeValueAsString(sale))))
 			.andExpect(status().isOk());
 		// duplicate
-		mockMvc.perform(post("/api/create-sale")
+		mockMvc.perform(post("/api/create-employee-account")
 				.header("Authorization", "Bearer " + access)
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
 				.content(Objects.requireNonNull(mapper.writeValueAsString(sale))))

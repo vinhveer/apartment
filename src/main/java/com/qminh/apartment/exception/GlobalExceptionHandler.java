@@ -38,6 +38,12 @@ public class GlobalExceptionHandler {
 			.body(ApiResponse.error("SQL_CONSTRAINT", "Constraint violation", details));
 	}
 
+	@ExceptionHandler(BusinessException.class)
+	public ResponseEntity<ApiResponse<Void>> handleBusiness(BusinessException ex) {
+		return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+			.body(ApiResponse.error("BUSINESS_ERROR", ex.getMessage(), null));
+	}
+
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException ex) {
 		Map<String, String> errors = new LinkedHashMap<>();

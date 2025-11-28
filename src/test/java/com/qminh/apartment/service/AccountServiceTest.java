@@ -1,7 +1,8 @@
 package com.qminh.apartment.service;
 
-import com.qminh.apartment.dto.account.AdminCreateReq;
-import com.qminh.apartment.dto.account.SaleCreateReq;
+import com.qminh.apartment.dto.account.AccountCreateReq;
+import com.qminh.apartment.dto.user.UserUpdateReq;
+import com.qminh.apartment.dto.user.UserRoleUpdateReq;
 import com.qminh.apartment.entity.Role;
 import com.qminh.apartment.repository.PropertySaleInfoRepository;
 import com.qminh.apartment.repository.RoleRepository;
@@ -38,20 +39,24 @@ class AccountServiceTest extends PostgresTestContainer {
 		if (roleRepository.findByRoleName("SALE").isEmpty()) {
 			Role r = new Role(); r.setRoleName("SALE"); roleRepository.saveAndFlush(r);
 		}
+		if (roleRepository.findByRoleName("USER").isEmpty()) {
+			Role r = new Role(); r.setRoleName("USER"); roleRepository.saveAndFlush(r);
+		}
 	}
 
 	@Test
 	@Transactional
-	@DisplayName("createSale creates user and sale info")
+	@DisplayName("createEmployeeAccount SALE creates user and sale info")
 	void create_sale() {
-		SaleCreateReq req = new SaleCreateReq();
+		AccountCreateReq req = new AccountCreateReq();
 		req.setUsername("saleT");
 		req.setEmail("saleT@example.com");
 		req.setPassword("123456");
 		req.setDisplayName("Sale T");
 		req.setFullName("Sale Tester");
 		req.setPhone("0900000999");
-		var res = service.createSale(req);
+		req.setRoleName("SALE");
+		var res = service.createEmployeeAccount(req);
 		assertThat(res.getUsername()).isEqualTo("saleT");
 		var u = userRepository.findByUsername("saleT").orElseThrow();
 		assertThat(saleInfoRepository.findByUserId(java.util.Objects.requireNonNull(u.getId()))).isPresent();
@@ -59,56 +64,256 @@ class AccountServiceTest extends PostgresTestContainer {
 
 	@Test
 	@Transactional
-	@DisplayName("createAdmin creates admin user")
+	@DisplayName("createEmployeeAccount ADMIN creates admin user and sale info")
 	void create_admin() {
-		AdminCreateReq req = new AdminCreateReq();
+		AccountCreateReq req = new AccountCreateReq();
 		req.setUsername("adminT");
 		req.setEmail("adminT@example.com");
 		req.setPassword("123456");
 		req.setDisplayName("Admin T");
-		var res = service.createAdmin(req);
+		req.setFullName("Admin Tester");
+		req.setPhone("0900000123");
+		req.setRoleName("ADMIN");
+		var res = service.createEmployeeAccount(req);
 		assertThat(res.getUsername()).isEqualTo("adminT");
-		assertThat(userRepository.findByUsername("adminT")).isPresent();
+		var u = userRepository.findByUsername("adminT").orElseThrow();
+		assertThat(saleInfoRepository.findByUserId(java.util.Objects.requireNonNull(u.getId()))).isPresent();
 	}
 
 	@Test
 	@Transactional
-	@DisplayName("createSale duplicate username/email -> ConflictException (409)")
+	@DisplayName("createEmployeeAccount duplicate username/email -> ConflictException (409)")
 	void create_sale_duplicate_conflict() {
-		SaleCreateReq req1 = new SaleCreateReq();
+		AccountCreateReq req1 = new AccountCreateReq();
 		req1.setUsername("dupSale");
 		req1.setEmail("dupSale@example.com");
 		req1.setPassword("123456");
 		req1.setDisplayName("Dup Sale");
 		req1.setFullName("Dup S");
 		req1.setPhone("0900");
-		service.createSale(req1);
-		SaleCreateReq req2 = new SaleCreateReq();
+		req1.setRoleName("SALE");
+		service.createEmployeeAccount(req1);
+		AccountCreateReq req2 = new AccountCreateReq();
 		req2.setUsername("dupSale");
 		req2.setEmail("dupSale@example.com");
 		req2.setPassword("123456");
 		req2.setDisplayName("Dup Sale 2");
 		req2.setFullName("Dup S2");
 		req2.setPhone("0901");
-		assertThatThrownBy(() -> service.createSale(req2)).isInstanceOf(ConflictException.class);
+		req2.setRoleName("SALE");
+		assertThatThrownBy(() -> service.createEmployeeAccount(req2)).isInstanceOf(ConflictException.class);
 	}
 
 	@Test
 	@Transactional
-	@DisplayName("createAdmin duplicate username/email -> ConflictException (409)")
+	@DisplayName("createEmployeeAccount ADMIN duplicate username/email -> ConflictException (409)")
 	void create_admin_duplicate_conflict() {
-		AdminCreateReq a1 = new AdminCreateReq();
+		AccountCreateReq a1 = new AccountCreateReq();
 		a1.setUsername("dupAdmin");
 		a1.setEmail("dupAdmin@example.com");
 		a1.setPassword("123456");
 		a1.setDisplayName("Dup Admin");
-		service.createAdmin(a1);
-		AdminCreateReq a2 = new AdminCreateReq();
+		a1.setFullName("Dup Admin Full");
+		a1.setPhone("0900");
+		a1.setRoleName("ADMIN");
+		service.createEmployeeAccount(a1);
+		AccountCreateReq a2 = new AccountCreateReq();
 		a2.setUsername("dupAdmin");
 		a2.setEmail("dupAdmin@example.com");
 		a2.setPassword("123456");
 		a2.setDisplayName("Dup Admin 2");
-		assertThatThrownBy(() -> service.createAdmin(a2)).isInstanceOf(ConflictException.class);
+		a2.setFullName("Dup Admin 2 Full");
+		a2.setPhone("0901");
+		a2.setRoleName("ADMIN");
+		assertThatThrownBy(() -> service.createEmployeeAccount(a2)).isInstanceOf(ConflictException.class);
+	}
+
+	@Test
+	@Transactional
+	@DisplayName("searchEmployeeAccounts returns only ADMIN/SALE and supports keyword")
+	void search_employee_accounts() {
+		// create employees via service
+		AccountCreateReq sale = new AccountCreateReq();
+		sale.setUsername("saleSearch");
+		sale.setEmail("saleSearch@example.com");
+		sale.setPassword("123456");
+		sale.setDisplayName("Sale Search");
+		sale.setFullName("Sale S");
+		sale.setPhone("0900");
+		sale.setRoleName("SALE");
+		service.createEmployeeAccount(sale);
+
+		AccountCreateReq admin = new AccountCreateReq();
+		admin.setUsername("adminSearch2");
+		admin.setEmail("adminSearch2@example.com");
+		admin.setPassword("123456");
+		admin.setDisplayName("Admin Search 2");
+		admin.setFullName("Admin Search 2 Full");
+		admin.setPhone("0901");
+		admin.setRoleName("ADMIN");
+		service.createEmployeeAccount(admin);
+
+		var pageAll = service.searchEmployeeAccounts(null, org.springframework.data.domain.PageRequest.of(0, 10));
+		assertThat(pageAll.getContent()).allMatch(u -> u.getRoleName().equals("ADMIN") || u.getRoleName().equals("SALE"));
+
+		var pageFiltered = service.searchEmployeeAccounts("saleSearch", org.springframework.data.domain.PageRequest.of(0, 10));
+		assertThat(pageFiltered.getContent()).extracting(com.qminh.apartment.dto.user.UserRes::getUsername).contains("saleSearch");
+	}
+
+	@Test
+	@Transactional
+	@DisplayName("editEmployeeAccount updates email/displayName")
+	void edit_employee_account() {
+		AccountCreateReq sale = new AccountCreateReq();
+		sale.setUsername("saleEdit");
+		sale.setEmail("saleEdit@example.com");
+		sale.setPassword("123456");
+		sale.setDisplayName("Sale Edit");
+		sale.setFullName("Sale E");
+		sale.setPhone("0900");
+		sale.setRoleName("SALE");
+		var created = service.createEmployeeAccount(sale);
+
+		UserUpdateReq up = new UserUpdateReq();
+		up.setEmail("saleEdit+new@example.com");
+		up.setDisplayName("Sale Edit New");
+
+		var res = service.editEmployeeAccount(created.getId(), up);
+		assertThat(res.getEmail()).isEqualTo("saleEdit+new@example.com");
+		assertThat(res.getDisplayName()).isEqualTo("Sale Edit New");
+	}
+
+	@Test
+	@Transactional
+	@DisplayName("deleteEmployeeAccount removes user and sale info for SALE")
+	void delete_employee_account_sale() {
+		AccountCreateReq sale = new AccountCreateReq();
+		sale.setUsername("saleDel");
+		sale.setEmail("saleDel@example.com");
+		sale.setPassword("123456");
+		sale.setDisplayName("Sale Del");
+		sale.setFullName("Sale D");
+		sale.setPhone("0900");
+		sale.setRoleName("SALE");
+		var created = service.createEmployeeAccount(sale);
+
+		Long id = java.util.Objects.requireNonNull(created.getId());
+		service.deleteEmployeeAccount(id);
+		assertThat(userRepository.findById(id)).isNotPresent();
+		assertThat(saleInfoRepository.findByUserId(id)).isNotPresent();
+	}
+
+	@Test
+	@Transactional
+	@DisplayName("changeEmployeeRole ADMIN <-> SALE manages sale info correctly")
+	void change_employee_role_flow() {
+		// start as ADMIN
+		AccountCreateReq admin = new AccountCreateReq();
+		admin.setUsername("roleUser");
+		admin.setEmail("roleUser@example.com");
+		admin.setPassword("123456");
+		admin.setDisplayName("Role User");
+		admin.setFullName("Role User Full");
+		admin.setPhone("0900");
+		admin.setRoleName("ADMIN");
+		var created = service.createEmployeeAccount(admin);
+
+		UserRoleUpdateReq toSale = new UserRoleUpdateReq();
+		toSale.setRoleName("SALE");
+		toSale.setFullName("Sale Role");
+		toSale.setPhone("0900");
+		Long id = java.util.Objects.requireNonNull(created.getId());
+		var saleRes = service.changeEmployeeRole(id, toSale);
+		assertThat(saleRes.getRoleName()).isEqualTo("SALE");
+		assertThat(saleInfoRepository.findByUserId(id)).isPresent();
+
+		UserRoleUpdateReq toAdmin = new UserRoleUpdateReq();
+		toAdmin.setRoleName("ADMIN");
+		var adminRes = service.changeEmployeeRole(id, toAdmin);
+		assertThat(adminRes.getRoleName()).isEqualTo("ADMIN");
+		// sale info is kept for ADMIN as well
+		assertThat(saleInfoRepository.findByUserId(id)).isPresent();
+	}
+
+	@Test
+	@Transactional
+	@DisplayName("changeEmployeeRole ADMIN -> SALE without fullName/phone auto-backfills from displayName/username")
+	void change_admin_to_sale_without_fullname_phone() {
+		// start as ADMIN
+		AccountCreateReq admin = new AccountCreateReq();
+		admin.setUsername("adminBackfill");
+		admin.setEmail("adminBackfill@example.com");
+		admin.setPassword("123456");
+		admin.setDisplayName("Admin Backfill");
+		admin.setFullName("Admin B Full");
+		admin.setPhone("0900");
+		admin.setRoleName("ADMIN");
+		var created = service.createEmployeeAccount(admin);
+		Long id = java.util.Objects.requireNonNull(created.getId());
+
+		// Change to SALE without fullName/phone - should backfill from displayName
+		UserRoleUpdateReq toSale = new UserRoleUpdateReq();
+		toSale.setRoleName("SALE");
+		// fullName and phone are null/not set
+		var saleRes = service.changeEmployeeRole(id, toSale);
+		assertThat(saleRes.getRoleName()).isEqualTo("SALE");
+		var saleInfo = saleInfoRepository.findByUserId(id).orElseThrow();
+		assertThat(saleInfo.getFullName()).isEqualTo("Admin Backfill"); // backfilled from displayName
+		assertThat(saleInfo.getPhone()).isEqualTo("N/A"); // backfilled default
+	}
+
+	@Test
+	@Transactional
+	@DisplayName("changeEmployeeRole ADMIN -> SALE without displayName backfills from username")
+	void change_admin_to_sale_backfill_from_username() {
+		// start as ADMIN without displayName
+		AccountCreateReq admin = new AccountCreateReq();
+		admin.setUsername("adminNoDisplay");
+		admin.setEmail("adminNoDisplay@example.com");
+		admin.setPassword("123456");
+		// displayName is null
+		admin.setFullName("Admin No Display Full");
+		admin.setPhone("0900");
+		admin.setRoleName("ADMIN");
+		var created = service.createEmployeeAccount(admin);
+		Long id = java.util.Objects.requireNonNull(created.getId());
+
+		// Change to SALE without fullName/phone - should backfill from username
+		UserRoleUpdateReq toSale = new UserRoleUpdateReq();
+		toSale.setRoleName("SALE");
+		var saleRes = service.changeEmployeeRole(id, toSale);
+		assertThat(saleRes.getRoleName()).isEqualTo("SALE");
+		var saleInfo = saleInfoRepository.findByUserId(id).orElseThrow();
+		assertThat(saleInfo.getFullName()).isEqualTo("adminNoDisplay"); // backfilled from username
+		assertThat(saleInfo.getPhone()).isEqualTo("N/A"); // backfilled default
+	}
+
+	@Test
+	@Transactional
+	@DisplayName("changeEmployeeRole ADMIN -> SALE with fullName/phone uses provided values")
+	void change_admin_to_sale_with_provided_values() {
+		// start as ADMIN
+		AccountCreateReq admin = new AccountCreateReq();
+		admin.setUsername("adminWithValues");
+		admin.setEmail("adminWithValues@example.com");
+		admin.setPassword("123456");
+		admin.setDisplayName("Admin With Values");
+		admin.setFullName("Admin Original");
+		admin.setPhone("0900");
+		admin.setRoleName("ADMIN");
+		var created = service.createEmployeeAccount(admin);
+		Long id = java.util.Objects.requireNonNull(created.getId());
+
+		// Change to SALE with provided fullName/phone
+		UserRoleUpdateReq toSale = new UserRoleUpdateReq();
+		toSale.setRoleName("SALE");
+		toSale.setFullName("New Sale Name");
+		toSale.setPhone("0901234567");
+		var saleRes = service.changeEmployeeRole(id, toSale);
+		assertThat(saleRes.getRoleName()).isEqualTo("SALE");
+		var saleInfo = saleInfoRepository.findByUserId(id).orElseThrow();
+		assertThat(saleInfo.getFullName()).isEqualTo("New Sale Name"); // uses provided value
+		assertThat(saleInfo.getPhone()).isEqualTo("0901234567"); // uses provided value
 	}
 }
 

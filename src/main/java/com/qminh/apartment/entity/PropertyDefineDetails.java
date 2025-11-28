@@ -36,5 +36,3 @@ public class PropertyDefineDetails {
 	@Column(name = "updated_at")
 	private LocalDateTime updatedAt;
 }
-
-

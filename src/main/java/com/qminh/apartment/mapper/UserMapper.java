@@ -1,7 +1,6 @@
 package com.qminh.apartment.mapper;
 
-import com.qminh.apartment.dto.account.AdminCreateReq;
-import com.qminh.apartment.dto.account.SaleCreateReq;
+import com.qminh.apartment.dto.account.AccountCreateReq;
 import com.qminh.apartment.dto.user.UserRes;
 import com.qminh.apartment.dto.user.UserUpdateReq;
 import com.qminh.apartment.entity.User;
@@ -20,16 +19,7 @@ public interface UserMapper {
 	@Mapping(target = "propertySaleInfo", ignore = true)
 	@Mapping(target = "createdAt", ignore = true)
 	@Mapping(target = "updatedAt", ignore = true)
-	User toEntity(AdminCreateReq req);
-
-	@Mapping(target = "id", ignore = true)
-	@Mapping(target = "role", ignore = true)
-	@Mapping(target = "emailVerifiedAt", ignore = true)
-	@Mapping(target = "rememberToken", ignore = true)
-	@Mapping(target = "propertySaleInfo", ignore = true)
-	@Mapping(target = "createdAt", ignore = true)
-	@Mapping(target = "updatedAt", ignore = true)
-	User toEntity(SaleCreateReq req);
+	User toEntity(AccountCreateReq req);
 
 	@BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
 	@Mapping(target = "id", ignore = true)
@@ -44,6 +34,8 @@ public interface UserMapper {
 	void updateEntityFromReq(UserUpdateReq req, @MappingTarget User entity);
 
 	@Mapping(target = "roleName", source = "role.roleName")
+	@Mapping(target = "fullName", source = "propertySaleInfo.fullName")
+	@Mapping(target = "phone", source = "propertySaleInfo.phone")
 	UserRes toRes(User entity);
 }
 

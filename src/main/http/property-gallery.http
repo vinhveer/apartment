@@ -1,0 +1,54 @@
+### Add file into property gallery
+# Request:
+#   POST /api/properties/{propertyId}/gallery
+#   Body: { "fileId": number }
+# Response 200:
+# {
+#   "message": "Add file into gallery successfully",
+#   "data": {
+#     "propertyId": 1,
+#     "fileId": 1,
+#     "filePath": "public/2025/01/sample.jpg"
+#   },
+#   "meta": null,
+#   "error": null
+# }
+POST http://localhost:8080/api/properties/1/gallery
+Authorization: Bearer {{ACCESS_TOKEN}}
+Content-Type: application/json
+
+{
+	"fileId": 1
+}
+
+### List files in property gallery
+# Request:
+#   GET /api/properties/{propertyId}/gallery
+# Response 200:
+# {
+#   "message": "Property gallery files",
+#   "data": [
+#     { "propertyId": 1, "fileId": 1, "filePath": "public/2025/01/sample.jpg" },
+#     { "propertyId": 1, "fileId": 2, "filePath": "public/2025/01/other.jpg" }
+#   ],
+#   "meta": null,
+#   "error": null
+# }
+GET http://localhost:8080/api/properties/1/gallery
+Authorization: Bearer {{ACCESS_TOKEN}}
+
+### Remove file from property gallery
+# Request:
+#   DELETE /api/properties/{propertyId}/gallery/{fileId}
+# Response 200:
+# {
+#   "message": "Delete file from gallery successfully",
+#   "data": null,
+#   "meta": null,
+#   "error": null
+# }
+DELETE http://localhost:8080/api/properties/1/gallery/1
+Authorization: Bearer {{ACCESS_TOKEN}}
+
+
+

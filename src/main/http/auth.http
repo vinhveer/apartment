@@ -3,44 +3,18 @@ POST http://localhost:8080/api/auth/login
 Content-Type: application/json
 
 {
-	"username": "vinh",
+	"username": "root",
 	"password": "123456"
 }
 
 ### Protected (me)
 GET http://localhost:8080/api/users/me
-Authorization: Bearer {{ACCESS_TOKEN}}
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJyb290IiwianRpIjoiN2M4NzI4ZGQ2RjOC00ZWQxLWEyMjAtNmM1ZDJlMDNhMGIxIiwiYXV0aG9yaXRpZXMiOlsiUk9MRV9BRE1JTiJdLCJpYXQiOjE3NjMzODQxODMsImV4cCI6MTc2MzM4NDc4M30.9Pu8nLx8PUL16A_zChIc-jqskKQFERWvNcpfqcsr2WQ
 
 ### Refresh (cookie auto-sent by browser)
 POST http://localhost:8080/api/auth/refresh
 
 ### Logout
 POST http://localhost:8080/api/auth/logout
-
-### Create sale account
-POST http://localhost:8080/api/create-sale
-Content-Type: application/json
-Authorization: Bearer {{ACCESS_TOKEN}}
-
-{
-	"username": "sale01",
-	"email": "sale01@example.com",
-	"password": "123456",
-	"displayName": "Sale 01",
-	"fullName": "Sale Person 01",
-	"phone": "0900000001"
-}
-
-### Create admin account
-POST http://localhost:8080/api/create-admin
-Content-Type: application/json
-Authorization: Bearer {{ACCESS_TOKEN}}
-
-{
-	"username": "admin01",
-	"email": "admin01@example.com",
-	"password": "123456",
-	"displayName": "Admin 01"
-}
 
 

@@ -21,6 +21,7 @@ public class PropertyDefineDetailsService implements IPropertyDefineDetailsServi
 	private final PropertyDefineDetailsRepository repository;
 	private final PropertyDefineDetailsMapper mapper;
 	private static final String NOT_FOUND = "Property define detail not found: ";
+	private static final String ENTITY_NOT_NULL = "entity must not be null";
 
 	public PropertyDefineDetailsService(PropertyDefineDetailsRepository repository, PropertyDefineDetailsMapper mapper) {
 		this.repository = repository;
@@ -30,7 +31,7 @@ public class PropertyDefineDetailsService implements IPropertyDefineDetailsServi
 	@Transactional
 	public PropertyDefineDetailsRes create(PropertyDefineDetailsCreateReq req) {
 		PropertyDefineDetails entity = mapper.toEntity(req);
-		PropertyDefineDetails updated = repository.save(Objects.requireNonNull(entity, "entity must not be null"));
+		PropertyDefineDetails updated = repository.save(Objects.requireNonNull(entity, ENTITY_NOT_NULL));
 		PropertyDefineDetails saved = Objects.requireNonNull(updated, "updated must not be null");
 		return mapper.toRes(saved);
 	}
@@ -53,7 +54,7 @@ public class PropertyDefineDetailsService implements IPropertyDefineDetailsServi
 		PropertyDefineDetails entity = repository.findById(id)
 			.orElseThrow(() -> new ResourceNotFoundException(NOT_FOUND + id));
 		mapper.updateEntityFromReq(req, entity);
-		PropertyDefineDetails updated = repository.save(Objects.requireNonNull(entity, "entity must not be null"));
+		PropertyDefineDetails updated = repository.save(Objects.requireNonNull(entity, ENTITY_NOT_NULL));
 		return mapper.toRes(updated);
 	}
 
@@ -61,8 +62,6 @@ public class PropertyDefineDetailsService implements IPropertyDefineDetailsServi
 	public void delete(int id) {
 		PropertyDefineDetails entity = repository.findById(id)
 			.orElseThrow(() -> new ResourceNotFoundException(NOT_FOUND + id));
-		repository.delete(Objects.requireNonNull(entity, "entity must not be null"));
+		repository.delete(Objects.requireNonNull(entity, ENTITY_NOT_NULL));
 	}
 }
-
-

@@ -6,6 +6,8 @@ public class UserRes {
 	private String email;
 	private String displayName;
 	private String roleName;
+	private String fullName;
+	private String phone;
 
 	public Long getId() { return id; }
 	public void setId(Long id) { this.id = id; }
@@ -17,6 +19,10 @@ public class UserRes {
 	public void setDisplayName(String displayName) { this.displayName = displayName; }
 	public String getRoleName() { return roleName; }
 	public void setRoleName(String roleName) { this.roleName = roleName; }
+	public String getFullName() { return fullName; }
+	public void setFullName(String fullName) { this.fullName = fullName; }
+	public String getPhone() { return phone; }
+	public void setPhone(String phone) { this.phone = phone; }
 }
 
 

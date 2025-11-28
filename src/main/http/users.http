@@ -1,24 +1,5 @@
-### Get user by id
-GET http://localhost:8080/api/users/1
-Authorization: Bearer {{ACCESS_TOKEN}}
-
-### List users
-GET http://localhost:8080/api/users?page=0&size=10
-Authorization: Bearer {{ACCESS_TOKEN}}
-
-### Update user
-PUT http://localhost:8080/api/users/1
-Content-Type: application/json
-Authorization: Bearer {{ACCESS_TOKEN}}
-
-{
-	"email": "user1+new@example.com",
-	"displayName": "User 1 New"
-}
-
-### Delete user
-DELETE http://localhost:8080/api/users/1
-Authorization: Bearer {{ACCESS_TOKEN}}
-
-
-
+### (removed) User admin CRUD APIs
+### User CRUD via /api/users has been removed. Admins now manage accounts via:
+### - POST /api/create-account           (create account)
+### - PUT  /api/users/{id}/role          (update user role)
+### - GET  /api/users/me                 (current user info)

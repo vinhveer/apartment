@@ -45,6 +45,18 @@ public class StoredFileMeta {
 	@Column(name = "relative_path", nullable = false, columnDefinition = "text")
 	private String relativePath;
 
+	@Column(name = "alt_text", length = 255)
+	private String altText;
+
+	@Column(name = "title", length = 255)
+	private String title;
+
+	@Column(name = "description", columnDefinition = "text")
+	private String description;
+
+	@Column(name = "tags", columnDefinition = "text")
+	private String tags;
+
 	@Column(name = "created_at", nullable = false)
 	private LocalDateTime createdAt;
 

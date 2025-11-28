@@ -2,12 +2,16 @@ package com.qminh.apartment.service.impl;
 
 import com.qminh.apartment.entity.StoredFileMeta;
 import com.qminh.apartment.entity.StoredFileVariant;
+import com.qminh.apartment.exception.ResourceNotFoundException;
 import com.qminh.apartment.repository.StoredFileMetaRepository;
 import com.qminh.apartment.repository.StoredFileVariantRepository;
 import com.qminh.apartment.service.IFileService;
 import com.qminh.apartment.storage.StoragePort;
+import com.qminh.apartment.dto.file.FileMetaUpdateReq;
 import net.coobird.thumbnailator.Thumbnails;
 import org.apache.tika.Tika;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,6 +26,7 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -124,6 +129,110 @@ public class FileService implements IFileService {
 		} catch (IOException e) {
 			throw new IllegalStateException("Upload failed", e);
 		}
+	}
+
+	@Transactional
+	public StoredFileMeta rename(Long fileId, String originalName) {
+		StoredFileMeta meta = fileRepo.findById(Objects.requireNonNull(fileId, "fileId must not be null"))
+			.orElseThrow(() -> new ResourceNotFoundException("File not found: " + fileId));
+		String sanitized = sanitizeOriginalName(Objects.requireNonNull(originalName, "originalName must not be null"));
+		meta.setOriginalName(sanitized);
+		return Objects.requireNonNull(fileRepo.save(meta), "saved meta must not be null");
+	}
+
+	@Transactional
+	public void delete(Long fileId) {
+		StoredFileMeta meta = fileRepo.findById(Objects.requireNonNull(fileId))
+			.orElseThrow(() -> new ResourceNotFoundException("File not found: " + fileId));
+		Long id = Objects.requireNonNull(meta.getFileId());
+		// delete variants first
+		var variants = variantRepo.findByFile_FileId(id);
+		for (StoredFileVariant v : variants) {
+			try {
+				storage.delete(Objects.requireNonNull(v.getRelativePath()));
+			} catch (IOException e) {
+				throw new IllegalStateException("Failed to delete variant file: " + v.getRelativePath(), e);
+			}
+		}
+		variantRepo.deleteAll(variants);
+		// delete original
+		try {
+			storage.delete(Objects.requireNonNull(meta.getRelativePath()));
+		} catch (IOException e) {
+			throw new IllegalStateException("Failed to delete file: " + meta.getRelativePath(), e);
+		}
+		fileRepo.delete(meta);
+	}
+
+	@Transactional(readOnly = true)
+	public Page<StoredFileMeta> search(
+		String accessLevel,
+		String mimeType,
+		String search,
+		LocalDate createdFrom,
+		LocalDate createdTo,
+		Pageable pageable
+	) {
+		Objects.requireNonNull(pageable, "pageable must not be null");
+		LocalDateTime from = createdFrom != null ? createdFrom.atStartOfDay() : null;
+		LocalDateTime to = createdTo != null ? createdTo.atTime(23, 59, 59) : null;
+		String access = accessLevel != null && !accessLevel.isBlank()
+			? accessLevel.trim().toUpperCase(Locale.ROOT)
+			: null;
+		String mime = null;
+		if (mimeType != null && !mimeType.isBlank()) {
+			String mt = mimeType.trim().toLowerCase(Locale.ROOT);
+			if (!mt.contains("/")) {
+				// "image" -> "image/%"
+				mime = mt + "/%";
+			} else {
+				mime = mt;
+			}
+		}
+		String q = null;
+		if (search != null && !search.isBlank()) {
+			q = "%" + search.trim() + "%";
+		}
+		Page<StoredFileMeta> base = fileRepo.search(access, mime, q, pageable);
+		if (from == null && to == null) {
+			return base;
+		}
+		java.util.List<StoredFileMeta> filtered = base.getContent().stream()
+			.filter(m -> {
+				LocalDateTime ts = m.getCreatedAt();
+				if (ts == null) return false;
+				if (from != null && ts.isBefore(from)) return false;
+				if (to != null && ts.isAfter(to)) return false;
+				return true;
+			})
+			.toList();
+		return new org.springframework.data.domain.PageImpl<>(filtered, pageable, filtered.size());
+	}
+
+	@Transactional
+	@SuppressWarnings("null")
+	public StoredFileMeta updateMeta(Long fileId, FileMetaUpdateReq req) {
+		StoredFileMeta meta = fileRepo.findById(Objects.requireNonNull(fileId, "fileId must not be null"))
+			.orElseThrow(() -> new ResourceNotFoundException("File not found: " + fileId));
+		if (req.getAltText() != null) {
+			meta.setAltText(req.getAltText());
+		}
+		if (req.getTitle() != null) {
+			meta.setTitle(req.getTitle());
+		}
+		if (req.getDescription() != null) {
+			meta.setDescription(req.getDescription());
+		}
+		if (req.getTags() != null) {
+			if (req.getTags().isEmpty()) {
+				meta.setTags(null);
+			} else {
+				String joined = String.join(",", req.getTags());
+				meta.setTags(joined);
+			}
+		}
+		StoredFileMeta savedMeta = fileRepo.save(meta);
+		return Objects.requireNonNull(savedMeta, "saved meta must not be null");
 	}
 
 	private void generateVariants(StoredFileMeta meta, String mime) throws IOException {

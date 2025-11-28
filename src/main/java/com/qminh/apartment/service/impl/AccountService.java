@@ -1,8 +1,9 @@
 package com.qminh.apartment.service.impl;
 
-import com.qminh.apartment.dto.account.AdminCreateReq;
-import com.qminh.apartment.dto.account.SaleCreateReq;
+import com.qminh.apartment.dto.account.AccountCreateReq;
 import com.qminh.apartment.dto.user.UserRes;
+import com.qminh.apartment.dto.user.UserUpdateReq;
+import com.qminh.apartment.dto.user.UserRoleUpdateReq;
 import com.qminh.apartment.entity.PropertySaleInfo;
 import com.qminh.apartment.entity.Role;
 import com.qminh.apartment.entity.User;
@@ -13,6 +14,8 @@ import com.qminh.apartment.repository.RoleRepository;
 import com.qminh.apartment.repository.UserRepository;
 import com.qminh.apartment.service.IAccountService;
 import com.qminh.apartment.exception.ConflictException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,20 +45,27 @@ public class AccountService implements IAccountService {
 	}
 
 	@Transactional
-	public UserRes createSale(SaleCreateReq req) {
-		// early duplicates check to return clear 409 CONFLICT instead of DB error
+	public UserRes createEmployeeAccount(AccountCreateReq req) {
 		userRepository.findByUsername(Objects.requireNonNull(req.getUsername())).ifPresent(u -> {
 			throw new ConflictException("Username already exists: " + req.getUsername());
 		});
 		userRepository.findByEmail(Objects.requireNonNull(req.getEmail())).ifPresent(u -> {
 			throw new ConflictException("Email already exists: " + req.getEmail());
 		});
-		Role sale = roleRepository.findByRoleName("SALE").orElseThrow();
+		String roleName = Objects.requireNonNull(req.getRoleName()).toUpperCase();
+		if (!roleName.equals("ADMIN") && !roleName.equals("SALE")) {
+			throw new IllegalArgumentException("roleName must be ADMIN or SALE");
+		}
+		Role role = roleRepository.findByRoleName(roleName).orElseThrow();
 		User user = userMapper.toEntity(req);
 		user.setPassword(passwordEncoder.encode(req.getPassword()));
-		user.setRole(sale);
+		user.setRole(role);
 		User saved = userRepository.save(user);
 
+		// fullName/phone required for all employee accounts (ADMIN and SALE)
+		if (req.getFullName() == null || req.getFullName().isBlank() || req.getPhone() == null || req.getPhone().isBlank()) {
+			throw new IllegalArgumentException("fullName and phone are required for employee accounts");
+		}
 		PropertySaleInfo info = saleInfoMapper.toEntity(req);
 		info.setUser(saved);
 		saleInfoRepository.save(info);
@@ -63,22 +73,119 @@ public class AccountService implements IAccountService {
 		return userMapper.toRes(saved);
 	}
 
+	@Transactional(readOnly = true)
+	public Page<UserRes> searchCustomerAccounts(String q, Pageable pageable) {
+		Objects.requireNonNull(pageable, "pageable must not be null");
+		String pattern = (q == null || q.isBlank()) ? null : "%" + q.trim() + "%";
+		return userRepository.searchByRole("USER", pattern, pageable).map(userMapper::toRes);
+	}
+
 	@Transactional
-	public UserRes createAdmin(AdminCreateReq req) {
-		// early duplicates check to return clear 409 CONFLICT instead of DB error
-		userRepository.findByUsername(Objects.requireNonNull(req.getUsername())).ifPresent(u -> {
-			throw new ConflictException("Username already exists: " + req.getUsername());
-		});
-		userRepository.findByEmail(Objects.requireNonNull(req.getEmail())).ifPresent(u -> {
-			throw new ConflictException("Email already exists: " + req.getEmail());
-		});
-		Role admin = roleRepository.findByRoleName("ADMIN").orElseThrow();
-		User user = userMapper.toEntity(req);
-		user.setPassword(passwordEncoder.encode(req.getPassword()));
-		user.setRole(admin);
-		User saved = userRepository.save(user);
-		return userMapper.toRes(saved);
+	public UserRes editCustomerAccount(long id, UserUpdateReq req) {
+		User u = userRepository.findById(id)
+			.orElseThrow(() -> new com.qminh.apartment.exception.ResourceNotFoundException("User not found: " + id));
+		userMapper.updateEntityFromReq(req, u);
+		User updated = userRepository.save(Objects.requireNonNull(u, "user must not be null"));
+		return userMapper.toRes(updated);
+	}
+
+	@Transactional
+	public void deleteCustomerAccount(long id) {
+		User u = userRepository.findById(id)
+			.orElseThrow(() -> new com.qminh.apartment.exception.ResourceNotFoundException("User not found: " + id));
+		userRepository.delete(Objects.requireNonNull(u, "user must not be null"));
+	}
+
+	@Transactional(readOnly = true)
+	public Page<UserRes> searchEmployeeAccounts(String q, Pageable pageable) {
+		Objects.requireNonNull(pageable, "pageable must not be null");
+		String pattern = (q == null || q.isBlank()) ? null : "%" + q.trim() + "%";
+		java.util.List<String> roles = java.util.List.of("ADMIN", "SALE");
+		return userRepository.searchByRoles(roles, pattern, pageable).map(userMapper::toRes);
+	}
+
+	@Transactional
+	public UserRes editEmployeeAccount(long id, UserUpdateReq req) {
+		User u = userRepository.findById(id)
+			.orElseThrow(() -> new com.qminh.apartment.exception.ResourceNotFoundException("User not found: " + id));
+		userMapper.updateEntityFromReq(req, u);
+		User updated = userRepository.save(Objects.requireNonNull(u, "user must not be null"));
+		// Update PropertySaleInfo if fullName/phone provided and user is employee (ADMIN/SALE)
+		String roleName = Objects.requireNonNull(updated.getRole()).getRoleName();
+		if (("ADMIN".equals(roleName) || "SALE".equals(roleName)) &&
+			(req.getFullName() != null || req.getPhone() != null)) {
+			saleInfoRepository.findByUserId(id).ifPresentOrElse(existing -> {
+				PropertySaleInfo info = Objects.requireNonNull(existing, "existing sale info must not be null");
+				if (req.getFullName() != null && !req.getFullName().isBlank()) {
+					info.setFullName(req.getFullName());
+				}
+				if (req.getPhone() != null && !req.getPhone().isBlank()) {
+					info.setPhone(req.getPhone());
+				}
+				saleInfoRepository.save(info);
+			}, () -> {
+				// Create sale info if not exists (should not happen for employee accounts, but handle gracefully)
+				if (req.getFullName() != null && !req.getFullName().isBlank() &&
+					req.getPhone() != null && !req.getPhone().isBlank()) {
+					PropertySaleInfo info = new PropertySaleInfo();
+					info.setUser(Objects.requireNonNull(updated, "updated user must not be null"));
+					info.setFullName(req.getFullName());
+					info.setPhone(req.getPhone());
+					saleInfoRepository.save(info);
+				}
+			});
+		}
+		return userMapper.toRes(updated);
+	}
+
+	@Transactional
+	public void deleteEmployeeAccount(long id) {
+		// delete sale info first if exists (FK constraint)
+		saleInfoRepository.findByUserId(id).ifPresent(info -> saleInfoRepository.deleteByUserId(id));
+		User u = userRepository.findById(id)
+			.orElseThrow(() -> new com.qminh.apartment.exception.ResourceNotFoundException("User not found: " + id));
+		userRepository.delete(Objects.requireNonNull(u, "user must not be null"));
+	}
+
+	@Transactional
+	public UserRes changeEmployeeRole(long id, UserRoleUpdateReq req) {
+		User u = userRepository.findById(id)
+			.orElseThrow(() -> new com.qminh.apartment.exception.ResourceNotFoundException("User not found: " + id));
+		String targetRole = Objects.requireNonNull(req.getRoleName()).toUpperCase();
+		if (!targetRole.equals("ADMIN") && !targetRole.equals("SALE")) {
+			throw new IllegalArgumentException("roleName must be ADMIN or SALE");
+		}
+		Role role = roleRepository.findByRoleName(targetRole).orElseThrow();
+		String current = Objects.requireNonNull(u.getRole()).getRoleName();
+		if (current.equals(targetRole)) {
+			return userMapper.toRes(u);
+		}
+		if (targetRole.equals("SALE")) {
+			u.setRole(role);
+			User saved = userRepository.save(u);
+			// Backfill fullName/phone if not provided (similar to createEmployeeAccount logic)
+			String fullName = (req.getFullName() != null && !req.getFullName().isBlank())
+				? req.getFullName()
+				: (u.getDisplayName() != null && !u.getDisplayName().isBlank() ? u.getDisplayName() : u.getUsername());
+			String phone = (req.getPhone() != null && !req.getPhone().isBlank()) ? req.getPhone() : "N/A";
+			// If sale info already exists (e.g. user was created as ADMIN with sale info), update it; otherwise create new
+			saleInfoRepository.findByUserId(id).ifPresentOrElse(existing -> {
+				existing.setFullName(fullName);
+				existing.setPhone(phone);
+				saleInfoRepository.save(existing);
+			}, () -> {
+				PropertySaleInfo info = new PropertySaleInfo();
+				info.setUser(saved);
+				info.setFullName(fullName);
+				info.setPhone(phone);
+				saleInfoRepository.save(info);
+			});
+			return userMapper.toRes(saved);
+		} else {
+			// Switch to ADMIN: keep sale info if exists, only change role
+			u.setRole(role);
+			User saved = userRepository.save(u);
+			return userMapper.toRes(saved);
+		}
 	}
 }
-
-

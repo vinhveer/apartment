@@ -1,0 +1,120 @@
+### Upload file (PUBLIC)
+# API upload file lên media library.
+# - Method: POST
+# - URL query:
+#   - accessLevel (optional, default PUBLIC): PUBLIC | PRIVATE
+# - Body:
+#   - multipart/form-data với 1 field:
+#     - file: binary content (ảnh/pdf...)
+# - Auth:
+#   - tuỳ cấu hình security (hiện tại FilesControllerIT đang yêu cầu Bearer token cho GET private, upload có thể tuỳ chỉnh).
+POST http://localhost:8080/api/files?accessLevel=PUBLIC
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="sample.jpg"
+Content-Type: image/jpeg
+
+< ./sample.jpg
+--WebAppBoundary--
+
+# Response 200
+# {
+#   "message": "Upload file successfully",
+#   "data": {
+#     "fileId": 1,                       # ID nội bộ của file
+#     "originalName": "sample.jpg",      # Tên file gốc (có thể đổi bằng API rename)
+#     "mimeType": "image/jpeg",         # MIME type detect tự động từ nội dung
+#     "sizeBytes": 12345,               # Kích thước file gốc (byte)
+#     "accessLevel": "PUBLIC",          # PUBLIC | PRIVATE
+#     "relativePath": "public/2025/01/sample.jpg", # Đường dẫn tương đối (storage)
+#     "variants": {                     # Các biến thể ảnh (thumb/list/detail...), key -> relativePath
+#       "thumb": "public/2025/01/sample-thumb.jpg"
+#     },
+#     "altText": null,                  # Text mô tả alt (SEO + accessibility)
+#     "title": null,                    # Tiêu đề ảnh/file (SEO + UI)
+#     "description": null,              # Mô tả dài hơn
+#     "tags": [],                       # Mảng tag (string) để filter/search trong media library
+#     "createdAt": "2025-01-10T10:00:00Z", # Thời gian tạo (UTC ISO-8601)
+#     "updatedAt": "2025-01-10T10:00:00Z"  # Thời gian cập nhật cuối cùng
+#   },
+#   "meta": null,
+#   "error": null
+# }
+
+### Get file metadata
+# Lấy metadata chi tiết của 1 file theo fileId.
+# - Method: GET
+# - Path param:
+#   - {id}: fileId
+# - Response giống structure data của upload.
+GET http://localhost:8080/api/files/1
+
+### Get file variant (private URL)
+# Lấy binary của 1 biến thể ảnh (ví dụ thumb).
+# - Method: GET
+# - Path param:
+#   - {id}: fileId
+#   - {key}: variantKey (thumb_200, list_600, detail_1200, ...)
+# - Response:
+#   - Content-Type: mimeType của variant (image/jpeg, ...)
+#   - Body: stream binary (dùng trực tiếp cho <img src="...">).
+GET http://localhost:8080/api/files/1/variant/thumb
+
+### List files (search + pagination)
+# API cho media library UI: list + search + filter + paging.
+# - Method: GET
+# - Query params:
+#   - accessLevel (optional): PUBLIC | PRIVATE
+#   - search (optional): search theo originalName, title, tags (like %search%)
+#   - mimeType (optional): "image" -> image/*; hoặc full "image/jpeg"
+#   - createdFrom, createdTo (optional): yyyy-MM-dd (LocalDate)
+#   - page (default 1, 1-based)
+#   - pageSize (default 20, max 100)
+GET http://localhost:8080/api/files?accessLevel=PUBLIC&search=banner&page=1&pageSize=20&mimeType=image
+
+### Rename file (update originalName)
+# Đổi tên gốc (originalName) của file, không đổi storedName/relativePath.
+# - Method: PUT
+# - Path param:
+#   - {id}: fileId
+# - Body JSON:
+#   - originalName: tên mới (hiển thị cho user, dùng cho SEO/UI).
+PUT http://localhost:8080/api/files/1/name
+Content-Type: application/json
+
+{
+	"originalName": "banner-homepage.jpg"
+}
+
+### Update file metadata (alt/title/description/tags)
+# Cập nhật metadata phục vụ SEO + UI quản trị.
+# - Method: PUT
+# - Path param:
+#   - {id}: fileId
+# - Body JSON:
+#   - altText (optional): alt cho ảnh.
+#   - title (optional): title ảnh/file.
+#   - description (optional): mô tả dài.
+#   - tags (optional): mảng string, list tag để filter/search.
+PUT http://localhost:8080/api/files/1/meta
+Content-Type: application/json
+
+{
+	"altText": "Banner chính trang chủ (desktop)",
+	"title": "Homepage main banner (desktop)",
+	"description": "Banner dùng cho campaign Tết 2025, phiên bản desktop",
+	"tags": ["banner", "homepage", "tet-2025", "desktop"]
+}
+
+### Delete file (meta + variants + physical)
+# Xoá file khỏi hệ thống:
+# - Xoá record StoredFileMeta
+# - Xoá variants
+# - Xoá file vật lý (gốc + variants) trong storage.
+# - Method: DELETE
+# - Path param:
+#   - {id}: fileId
+DELETE http://localhost:8080/api/files/1
+
+

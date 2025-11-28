@@ -106,12 +106,15 @@ class FilesControllerIT extends PostgresTestContainer {
 			.andReturn().getResponse().getContentAsString();
 		long fileId = mapper.readTree(uploadRes).path("data").path("fileId").asLong();
 		mockMvc.perform(get("/api/files/{id}", fileId))
-			.andExpect(status().isForbidden());
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.message").value("Get file successfully"))
+			.andExpect(jsonPath("$.data.fileId").value((int) fileId))
+			.andExpect(jsonPath("$.data.mimeType").value(MIME_TYPE_JPEG));
 	}
 
 	@Test
-	@DisplayName("POST /api/files (PRIVATE) then GET returns content when authorized")
-	void upload_private_and_get_ok() throws Exception {
+	@DisplayName("POST /api/files (PRIVATE) then GET/PUT/DELETE work when authorized")
+	void upload_private_get_rename_delete_ok() throws Exception {
 		String access = login();
 		var file = sampleJpegWithSize(12); // ensure different content from previous test to avoid de-dup
 		var uploadRes = mockMvc.perform(multipart("/api/files")
@@ -123,9 +126,112 @@ class FilesControllerIT extends PostgresTestContainer {
 			.andExpect(jsonPath("$.data.accessLevel").value("PRIVATE"))
 			.andReturn().getResponse().getContentAsString();
 		long fileId = mapper.readTree(uploadRes).path("data").path("fileId").asLong();
+
+		// GET metadata
 		mockMvc.perform(get("/api/files/{id}", fileId).header(AUTH_HEADER, BEARER_PREFIX + access))
 			.andExpect(status().isOk())
-			.andExpect(header().string("Content-Type", MIME_TYPE_JPEG));
+			.andExpect(jsonPath("$.message").value("Get file successfully"))
+			.andExpect(jsonPath("$.data.fileId").value((int) fileId))
+			.andExpect(jsonPath("$.data.mimeType").value(MIME_TYPE_JPEG));
+
+		// Rename
+		var renameBody = """
+			{"originalName":"renamed.jpg"}
+			""";
+		mockMvc.perform(put("/api/files/{id}/name", fileId)
+				.header(AUTH_HEADER, BEARER_PREFIX + access)
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(renameBody))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.message").value("Rename file successfully"))
+			.andExpect(jsonPath("$.data.originalName").value("renamed.jpg"));
+
+		// Delete
+		mockMvc.perform(delete("/api/files/{id}", fileId)
+				.header(AUTH_HEADER, BEARER_PREFIX + access))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.message").value("Delete file successfully"));
+
+		// GET after delete -> 404
+		mockMvc.perform(get("/api/files/{id}", fileId).header(AUTH_HEADER, BEARER_PREFIX + access))
+			.andExpect(status().isNotFound());
+	}
+
+	@Test
+	@DisplayName("GET /api/files list with search and pagination works")
+	void list_files_with_search_and_paging() throws Exception {
+		String access = login();
+
+		// upload 2 PUBLIC and 1 PRIVATE files
+		var banner = sampleJpegWithSize(20);
+		mockMvc.perform(multipart("/api/files")
+				.file(Objects.requireNonNull(banner))
+				.param("accessLevel", "PUBLIC")
+				.header(AUTH_HEADER, BEARER_PREFIX + access))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.fileId").exists());
+
+		var other = sampleJpegWithSize(22);
+		mockMvc.perform(multipart("/api/files")
+				.file(Objects.requireNonNull(other))
+				.param("accessLevel", "PUBLIC")
+				.header(AUTH_HEADER, BEARER_PREFIX + access))
+			.andExpect(status().isOk());
+
+		var privateFile = sampleJpegWithSize(24);
+		mockMvc.perform(multipart("/api/files")
+				.file(Objects.requireNonNull(privateFile))
+				.param("accessLevel", "PRIVATE")
+				.header(AUTH_HEADER, BEARER_PREFIX + access))
+			.andExpect(status().isOk());
+
+		// list only PUBLIC files, page=1,pageSize=2
+		mockMvc.perform(get("/api/files")
+				.param("accessLevel", "PUBLIC")
+				.param("page", "1")
+				.param("pageSize", "2")
+				.header(AUTH_HEADER, BEARER_PREFIX + access))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.message").value("Get files successfully"))
+			.andExpect(jsonPath("$.data.items").isArray());
+	}
+
+	@Test
+	@DisplayName("PUT /api/files/{id}/meta updates metadata; 404 when file not found")
+	void update_meta_and_not_found() throws Exception {
+		String access = login();
+		var file = sampleJpegWithSize(16);
+		var uploadRes = mockMvc.perform(multipart("/api/files")
+				.file(Objects.requireNonNull(file))
+				.param("accessLevel", "PUBLIC")
+				.header(AUTH_HEADER, BEARER_PREFIX + access))
+			.andExpect(status().isOk())
+			.andReturn().getResponse().getContentAsString();
+		long fileId = mapper.readTree(uploadRes).path("data").path("fileId").asLong();
+
+		var body = """
+			{
+			  "altText": "Banner chính trang chủ (desktop)",
+			  "title": "Homepage main banner (desktop)",
+			  "description": "Banner dùng cho campaign Tết 2025, phiên bản desktop",
+			  "tags": ["banner", "homepage", "tet-2025", "desktop"]
+			}
+			""";
+		mockMvc.perform(put("/api/files/{id}/meta", fileId)
+				.header(AUTH_HEADER, BEARER_PREFIX + access)
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(body))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.message").value("Update file metadata successfully"))
+			.andExpect(jsonPath("$.data.altText").value("Banner chính trang chủ (desktop)"))
+			.andExpect(jsonPath("$.data.tags[0]").value("banner"));
+
+		// not found
+		mockMvc.perform(put("/api/files/{id}/meta", 999999L)
+				.header(AUTH_HEADER, BEARER_PREFIX + access)
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(body))
+			.andExpect(status().isNotFound());
 	}
 }
 
