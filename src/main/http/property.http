@@ -9,7 +9,8 @@ Content-Type: application/json
 	"typeId": 1,
 	"saleUserId": 1,
 	"areaId": 1,
-	"isPublic": true
+	"isPublic": true,
+	"isForRent": false
 }
 
 ### Get property detail
@@ -29,7 +30,8 @@ Content-Type: application/json
 	"typeId": 1,
 	"saleUserId": 1,
 	"areaId": 1,
-	"isPublic": false
+	"isPublic": false,
+	"isForRent": true
 }
 
 ### Delete property

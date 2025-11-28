@@ -45,6 +45,9 @@ public class Property {
 	@Column(name = "is_public", nullable = false)
 	private Boolean isPublic = Boolean.FALSE;
 
+	@Column(name = "is_for_rent", nullable = false)
+	private Boolean isForRent = Boolean.FALSE;
+
 	@Column(name = "created_at")
 	private LocalDateTime createdAt;
 

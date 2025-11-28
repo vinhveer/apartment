@@ -83,6 +83,7 @@ class PropertyControllerIT extends PostgresTestContainer {
 		req.setSaleUserId(Objects.requireNonNull(saleUserId));
 		req.setAreaId(Objects.requireNonNull(areaId));
 		req.setIsPublic(true);
+		req.setIsForRent(false);
 
 		String createRes = mockMvc.perform(post("/api/properties")
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
@@ -107,6 +108,7 @@ class PropertyControllerIT extends PostgresTestContainer {
 		up.setSaleUserId(saleUserId);
 		up.setAreaId(areaId);
 		up.setIsPublic(false);
+		up.setIsForRent(true);
 
 		mockMvc.perform(put("/api/properties/{id}", id)
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
@@ -133,6 +135,7 @@ class PropertyControllerIT extends PostgresTestContainer {
 		req.setSaleUserId(Objects.requireNonNull(saleUserId));
 		req.setAreaId(Objects.requireNonNull(areaId));
 		req.setIsPublic(true);
+		req.setIsForRent(false);
 		mockMvc.perform(post("/api/properties")
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
 				.content(Objects.requireNonNull(mapper.writeValueAsString(req))))
@@ -153,6 +156,7 @@ class PropertyControllerIT extends PostgresTestContainer {
 		up.setSaleUserId(Objects.requireNonNull(saleUserId));
 		up.setAreaId(Objects.requireNonNull(areaId));
 		up.setIsPublic(false);
+		up.setIsForRent(true);
 		mockMvc.perform(put("/api/properties/{id}", 999999)
 				.contentType(MediaType.APPLICATION_JSON_VALUE)
 				.content(Objects.requireNonNull(mapper.writeValueAsString(up))))

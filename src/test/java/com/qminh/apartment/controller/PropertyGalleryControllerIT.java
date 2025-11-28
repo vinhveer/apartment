@@ -135,6 +135,7 @@ class PropertyGalleryControllerIT extends PostgresTestContainer {
 		req.setSaleUserId(info.getUserId());
 		req.setAreaId(area.getAreaId());
 		req.setIsPublic(true);
+		req.setIsForRent(false);
 
 		try {
 			var createRes = mockMvc.perform(post("/api/properties")

@@ -1,5 +1,17 @@
-### (removed) User admin CRUD APIs
-### User CRUD via /api/users has been removed. Admins now manage accounts via:
-### - POST /api/create-account           (create account)
-### - PUT  /api/users/{id}/role          (update user role)
-### - GET  /api/users/me                 (current user info)
+### Get current user info (authenticated)
+# Request:
+#   GET /api/users/me
+#   Headers: Authorization: Bearer {accessToken}
+# Response 200:
+# {
+#   "message": "Me",
+#   "data": {
+#     "id": 1,
+#     "username": "root",
+#     "roles": ["ROLE_ADMIN"]
+#   },
+#   "meta": null,
+#   "error": null
+# }
+GET http://localhost:8080/api/users/me
+Authorization: Bearer {{ACCESS_TOKEN}}

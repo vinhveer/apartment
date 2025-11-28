@@ -11,6 +11,7 @@ public class PropertyRes {
 	private Long saleUserId;
 	private Integer areaId;
 	private Boolean isPublic;
+	private Boolean isForRent;
 
 	public Long getPropertyId() { return propertyId; }
 	public void setPropertyId(Long propertyId) { this.propertyId = propertyId; }
@@ -28,6 +29,8 @@ public class PropertyRes {
 	public void setAreaId(Integer areaId) { this.areaId = areaId; }
 	public Boolean getIsPublic() { return isPublic; }
 	public void setIsPublic(Boolean isPublic) { this.isPublic = isPublic; }
+	public Boolean getIsForRent() { return isForRent; }
+	public void setIsForRent(Boolean isForRent) { this.isForRent = isForRent; }
 }
 
 

@@ -19,6 +19,8 @@ public class PropertyUpdateReq {
 	private Integer areaId;
 	@NotNull
 	private Boolean isPublic;
+	@NotNull
+	private Boolean isForRent;
 
 	public String getTitle() { return title; }
 	public void setTitle(String title) { this.title = title; }
@@ -34,6 +36,8 @@ public class PropertyUpdateReq {
 	public void setAreaId(Integer areaId) { this.areaId = areaId; }
 	public Boolean getIsPublic() { return isPublic; }
 	public void setIsPublic(Boolean isPublic) { this.isPublic = isPublic; }
+	public Boolean getIsForRent() { return isForRent; }
+	public void setIsForRent(Boolean isForRent) { this.isForRent = isForRent; }
 }
 
 

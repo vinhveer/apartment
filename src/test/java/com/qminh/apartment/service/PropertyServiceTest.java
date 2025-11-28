@@ -73,6 +73,7 @@ class PropertyServiceTest extends PostgresTestContainer {
 		req.setSaleUserId(saleUserId);
 		req.setAreaId(areaId);
 		req.setIsPublic(true);
+		req.setIsForRent(false);
 		var created = service.create(req);
 		assertThat(created.getPropertyId()).isNotNull();
 
@@ -87,6 +88,7 @@ class PropertyServiceTest extends PostgresTestContainer {
 		up.setSaleUserId(saleUserId);
 		up.setAreaId(areaId);
 		up.setIsPublic(false);
+		up.setIsForRent(true);
 		var updated = service.update(created.getPropertyId(), up);
 		assertThat(updated.getTitle()).isEqualTo("T2");
 	}
@@ -103,6 +105,7 @@ class PropertyServiceTest extends PostgresTestContainer {
 		req.setSaleUserId(saleUserId);
 		req.setAreaId(areaId);
 		req.setIsPublic(false);
+		req.setIsForRent(true);
 		var created = service.create(req);
 		Long deletedId = created.getPropertyId();
 		service.delete(deletedId);
@@ -123,6 +126,7 @@ class PropertyServiceTest extends PostgresTestContainer {
 			req.setSaleUserId(saleUserId);
 			req.setAreaId(areaId);
 			req.setIsPublic(true);
+			req.setIsForRent(false);
 			service.create(req);
 		}
 		Pageable p = PageRequest.of(0, 3, Sort.by(Sort.Direction.ASC, "propertyId"));
@@ -145,6 +149,7 @@ class PropertyServiceTest extends PostgresTestContainer {
 		up.setSaleUserId(saleUserId);
 		up.setAreaId(areaId);
 		up.setIsPublic(true);
+		up.setIsForRent(false);
 		assertThatThrownBy(() -> service.update(999999, up)).isInstanceOf(ResourceNotFoundException.class);
 		assertThatThrownBy(() -> service.delete(999999)).isInstanceOf(ResourceNotFoundException.class);
 	}

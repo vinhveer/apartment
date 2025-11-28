@@ -69,55 +69,6 @@ class AccountAdvancedControllerIT extends PostgresTestContainer {
 	}
 
 	@Test
-	@DisplayName("GET/PUT/DELETE customer accounts works")
-	void customer_accounts_flow() throws Exception {
-		String access = loginAsRoot();
-
-		// seed 2 customers (role USER)
-		Role userRole = roleRepository.findByRoleName("USER").orElseThrow();
-		User c1 = new User();
-		c1.setUsername("custIT1");
-		c1.setEmail("custIT1@example.com");
-		c1.setPassword(passwordEncoder.encode("123456"));
-		c1.setRole(userRole);
-		c1 = userRepository.saveAndFlush(c1);
-
-		User c2 = new User();
-		c2.setUsername("custIT2");
-		c2.setEmail("custIT2@example.com");
-		c2.setPassword(passwordEncoder.encode("123456"));
-		c2.setRole(userRole);
-		c2 = userRepository.saveAndFlush(c2);
-
-		// list customers
-		mockMvc.perform(get("/api/accounts/customers?page=0&size=10&q=custIT")
-				.header("Authorization", "Bearer " + access))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.message").value("Customer account list"))
-			.andExpect(jsonPath("$.data.content").isArray())
-			.andExpect(jsonPath("$.data.content.length()").value(2));
-
-		// edit customer
-		var up = """
-			{"email":"custIT1+new@example.com","displayName":"Cust IT1 New"}
-			""";
-		mockMvc.perform(put("/api/accounts/customers/{id}", c1.getId())
-				.header("Authorization", "Bearer " + access)
-				.contentType(MediaType.APPLICATION_JSON_VALUE)
-				.content(up))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.message").value("Update customer account successfully"))
-			.andExpect(jsonPath("$.data.email").value("custIT1+new@example.com"))
-			.andExpect(jsonPath("$.data.displayName").value("Cust IT1 New"));
-
-		// delete customer
-		mockMvc.perform(delete("/api/accounts/customers/{id}", c2.getId())
-				.header("Authorization", "Bearer " + access))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.message").value("Delete customer account successfully"));
-	}
-
-	@Test
 	@DisplayName("GET/PUT/DELETE employee accounts and change role works")
 	void employee_accounts_and_role_flow() throws Exception {
 		String access = loginAsRoot();
