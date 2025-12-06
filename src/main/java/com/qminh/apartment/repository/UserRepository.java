@@ -26,7 +26,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 		where u.role.roleName = :role
 		  and (:q is null
 		       or u.username like :q
-		       or u.email like :q)
+		       or u.email like :q
+		       or coalesce(u.displayName, '') like :q)
 		""")
 	Page<User> searchByRole(@Param("role") String role, @Param("q") String q, Pageable pageable);
 
@@ -36,7 +37,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 		where u.role.roleName in :roles
 		  and (:q is null
 		       or u.username like :q
-		       or u.email like :q)
+		       or u.email like :q
+		       or coalesce(u.displayName, '') like :q)
 		""")
 	Page<User> searchByRoles(@Param("roles") Collection<String> roles, @Param("q") String q, Pageable pageable);
 }

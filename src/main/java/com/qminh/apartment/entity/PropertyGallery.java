@@ -24,7 +24,7 @@ public class PropertyGallery {
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@MapsId("fileId")
 	@JoinColumn(name = "file_id", nullable = false)
-	private StoredFile file;
+	private StoredFileMeta file;
 
 	@Column(name = "created_at")
 	private LocalDateTime createdAt;

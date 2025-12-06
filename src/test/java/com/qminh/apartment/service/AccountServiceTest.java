@@ -162,6 +162,96 @@ class AccountServiceTest extends PostgresTestContainer {
 
 	@Test
 	@Transactional
+	@DisplayName("searchEmployeeAccounts searches by username, email, and displayName")
+	void search_employee_accounts_by_multiple_fields() {
+		// Create employees with different searchable fields
+		AccountCreateReq sale1 = new AccountCreateReq();
+		sale1.setUsername("saleUser1");
+		sale1.setEmail("sale1@example.com");
+		sale1.setPassword("123456");
+		sale1.setDisplayName("John Doe");
+		sale1.setFullName("John Doe Full");
+		sale1.setPhone("0900");
+		sale1.setRoleName("SALE");
+		service.createEmployeeAccount(sale1);
+
+		AccountCreateReq sale2 = new AccountCreateReq();
+		sale2.setUsername("saleUser2");
+		sale2.setEmail("jane.smith@example.com");
+		sale2.setPassword("123456");
+		sale2.setDisplayName("Jane Smith");
+		sale2.setFullName("Jane Smith Full");
+		sale2.setPhone("0901");
+		sale2.setRoleName("SALE");
+		service.createEmployeeAccount(sale2);
+
+		AccountCreateReq admin1 = new AccountCreateReq();
+		admin1.setUsername("adminUser1");
+		admin1.setEmail("admin1@example.com");
+		admin1.setPassword("123456");
+		admin1.setDisplayName("Admin Manager");
+		admin1.setFullName("Admin Manager Full");
+		admin1.setPhone("0902");
+		admin1.setRoleName("ADMIN");
+		service.createEmployeeAccount(admin1);
+
+		// Search by username
+		var pageByUsername = service.searchEmployeeAccounts("saleUser1", org.springframework.data.domain.PageRequest.of(0, 10));
+		assertThat(pageByUsername.getContent()).extracting(com.qminh.apartment.dto.user.UserRes::getUsername).contains("saleUser1");
+		assertThat(pageByUsername.getContent()).hasSize(1);
+
+		// Search by email
+		var pageByEmail = service.searchEmployeeAccounts("jane.smith@example.com", org.springframework.data.domain.PageRequest.of(0, 10));
+		assertThat(pageByEmail.getContent()).extracting(com.qminh.apartment.dto.user.UserRes::getEmail).contains("jane.smith@example.com");
+		assertThat(pageByEmail.getContent()).hasSize(1);
+
+		// Search by displayName
+		var pageByDisplayName = service.searchEmployeeAccounts("John Doe", org.springframework.data.domain.PageRequest.of(0, 10));
+		assertThat(pageByDisplayName.getContent()).extracting(com.qminh.apartment.dto.user.UserRes::getDisplayName).contains("John Doe");
+		assertThat(pageByDisplayName.getContent()).hasSize(1);
+
+		// Search by partial displayName
+		var pageByPartialDisplayName = service.searchEmployeeAccounts("Manager", org.springframework.data.domain.PageRequest.of(0, 10));
+		assertThat(pageByPartialDisplayName.getContent()).extracting(com.qminh.apartment.dto.user.UserRes::getDisplayName).contains("Admin Manager");
+		assertThat(pageByPartialDisplayName.getContent()).hasSize(1);
+
+		// Search by partial email
+		var pageByPartialEmail = service.searchEmployeeAccounts("example.com", org.springframework.data.domain.PageRequest.of(0, 10));
+		assertThat(pageByPartialEmail.getContent()).hasSizeGreaterThanOrEqualTo(3); // Should find all employees
+
+		// Search with no results
+		var pageNoResults = service.searchEmployeeAccounts("nonexistent", org.springframework.data.domain.PageRequest.of(0, 10));
+		assertThat(pageNoResults.getContent()).isEmpty();
+	}
+
+	@Test
+	@Transactional
+	@DisplayName("searchEmployeeAccounts handles null displayName correctly")
+	void search_employee_accounts_with_null_displayName() {
+		// Create employee without displayName
+		AccountCreateReq sale = new AccountCreateReq();
+		sale.setUsername("saleNoDisplay");
+		sale.setEmail("saleNoDisplay@example.com");
+		sale.setPassword("123456");
+		// displayName is null
+		sale.setFullName("Sale No Display");
+		sale.setPhone("0900");
+		sale.setRoleName("SALE");
+		service.createEmployeeAccount(sale);
+
+		// Search by username should still work
+		var pageByUsername = service.searchEmployeeAccounts("saleNoDisplay", org.springframework.data.domain.PageRequest.of(0, 10));
+		assertThat(pageByUsername.getContent()).extracting(com.qminh.apartment.dto.user.UserRes::getUsername).contains("saleNoDisplay");
+		assertThat(pageByUsername.getContent()).hasSize(1);
+
+		// Search by email should still work
+		var pageByEmail = service.searchEmployeeAccounts("saleNoDisplay@example.com", org.springframework.data.domain.PageRequest.of(0, 10));
+		assertThat(pageByEmail.getContent()).extracting(com.qminh.apartment.dto.user.UserRes::getEmail).contains("saleNoDisplay@example.com");
+		assertThat(pageByEmail.getContent()).hasSize(1);
+	}
+
+	@Test
+	@Transactional
 	@DisplayName("editEmployeeAccount updates email/displayName")
 	void edit_employee_account() {
 		AccountCreateReq sale = new AccountCreateReq();

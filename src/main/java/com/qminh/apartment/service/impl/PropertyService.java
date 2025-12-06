@@ -2,6 +2,7 @@ package com.qminh.apartment.service.impl;
 
 import com.qminh.apartment.dto.property.PropertyCreateReq;
 import com.qminh.apartment.dto.property.PropertyRes;
+import com.qminh.apartment.dto.property.PropertySearchReq;
 import com.qminh.apartment.dto.property.PropertyUpdateReq;
 import com.qminh.apartment.entity.Property;
 import com.qminh.apartment.entity.PropertyArea;
@@ -12,6 +13,7 @@ import com.qminh.apartment.mapper.PropertyMapper;
 import com.qminh.apartment.repository.PropertyAreaRepository;
 import com.qminh.apartment.repository.PropertyRepository;
 import com.qminh.apartment.repository.PropertySaleInfoRepository;
+import com.qminh.apartment.repository.PropertySpecifications;
 import com.qminh.apartment.repository.PropertyTypeRepository;
 import com.qminh.apartment.service.IPropertyService;
 import org.springframework.data.domain.Page;
@@ -69,6 +71,13 @@ public class PropertyService implements IPropertyService {
 	public Page<PropertyRes> list(Pageable pageable) {
 		Objects.requireNonNull(pageable, "pageable must not be null");
 		return repository.findAll(pageable).map(mapper::toRes);
+	}
+
+	@Transactional(readOnly = true)
+	public Page<PropertyRes> search(PropertySearchReq req, Pageable pageable) {
+		Objects.requireNonNull(pageable, "pageable must not be null");
+		var spec = PropertySpecifications.bySearchReq(req);
+		return repository.findAll(spec, pageable).map(mapper::toRes);
 	}
 
 	@Transactional

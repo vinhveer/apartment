@@ -16,7 +16,7 @@ public interface PropertyGalleryMapper {
 
 	@Mapping(target = "propertyId", source = "property.propertyId")
 	@Mapping(target = "fileId", source = "file.fileId")
-	@Mapping(target = "filePath", source = "file.filePath")
+	@Mapping(target = "filePath", source = "file.relativePath")
 	PropertyGalleryRes toRes(PropertyGallery entity);
 }
 

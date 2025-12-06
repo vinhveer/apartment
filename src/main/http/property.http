@@ -37,5 +37,62 @@ Content-Type: application/json
 ### Delete property
 DELETE http://localhost:8080/api/properties/1
 
+### Advanced search properties
+POST http://localhost:8080/api/properties/search?page=0&size=10&sort=createdAt,desc
+Content-Type: application/json
+
+{
+	"q": "vinhome",
+	"isForRent": true,
+	"minPrice": 1000000000,
+	"maxPrice": 3000000000,
+	"areaIds": [1, 2],
+	"details": [
+		{
+			"detailId": 1,
+			"minNumber": 70
+		},
+		{
+			"detailId": 2,
+			"number": 2
+		}
+	]
+}
+
+### Advanced search - keyword only
+POST http://localhost:8080/api/properties/search?page=0&size=10
+Content-Type: application/json
+
+{
+	"q": "park"
+}
+
+### Advanced search - filter by price range and type
+POST http://localhost:8080/api/properties/search?page=0&size=10&sort=price,asc
+Content-Type: application/json
+
+{
+	"minPrice": 1000000000,
+	"maxPrice": 5000000000,
+	"typeIds": [1, 2],
+	"isPublic": true
+}
+
+### Advanced search - filter by date range
+POST http://localhost:8080/api/properties/search?page=0&size=10
+Content-Type: application/json
+
+{
+	"createdFrom": "2025-01-01T00:00:00",
+	"createdTo": "2025-02-01T00:00:00"
+}
+
+### Advanced search - empty body (returns all)
+POST http://localhost:8080/api/properties/search?page=0&size=10
+Content-Type: application/json
+
+{
+}
+
 
 

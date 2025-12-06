@@ -7,13 +7,13 @@ import com.qminh.apartment.entity.PropertyArea;
 import com.qminh.apartment.entity.PropertySaleInfo;
 import com.qminh.apartment.entity.PropertyType;
 import com.qminh.apartment.entity.Role;
-import com.qminh.apartment.entity.StoredFile;
+import com.qminh.apartment.entity.StoredFileMeta;
 import com.qminh.apartment.entity.User;
 import com.qminh.apartment.repository.PropertyAreaRepository;
 import com.qminh.apartment.repository.PropertyTypeRepository;
 import com.qminh.apartment.repository.PropertySaleInfoRepository;
 import com.qminh.apartment.repository.RoleRepository;
-import com.qminh.apartment.repository.StoredFileRepository;
+import com.qminh.apartment.repository.StoredFileMetaRepository;
 import com.qminh.apartment.repository.UserRepository;
 import com.qminh.apartment.testsupport.PostgresTestContainer;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,7 +54,7 @@ class PropertyGalleryControllerIT extends PostgresTestContainer {
 	@Autowired private PropertyTypeRepository typeRepository;
 	@Autowired private PropertyAreaRepository areaRepository;
 	@Autowired private PropertySaleInfoRepository saleInfoRepository;
-	@Autowired private StoredFileRepository storedFileRepository;
+	@Autowired private StoredFileMetaRepository storedFileMetaRepository;
 
 	private static final String USERNAME_SALE = "saleGallery";
 	private static final String AUTH_HEADER = "Authorization";
@@ -150,12 +150,21 @@ class PropertyGalleryControllerIT extends PostgresTestContainer {
 		}
 	}
 
-	private StoredFile prepareFile(String path) {
-		StoredFile f = new StoredFile();
-		f.setFilePath(Objects.requireNonNull(path));
+	private StoredFileMeta prepareFile(String path) {
+		StoredFileMeta f = new StoredFileMeta();
+		f.setOriginalName("test.jpg");
+		f.setStoredName("stored_" + System.nanoTime() + ".jpg");
+		f.setExt("jpg");
+		f.setMimeType("image/jpeg");
+		f.setSizeBytes(1024L);
+		String uniqueSha = String.format("%064x", System.nanoTime() + System.currentTimeMillis() + path.hashCode());
+		f.setSha256(uniqueSha);
+		f.setAccessLevel("PUBLIC");
+		f.setLocation("LOCAL");
+		f.setRelativePath(Objects.requireNonNull(path));
 		f.setCreatedAt(LocalDateTime.now());
 		f.setUpdatedAt(LocalDateTime.now());
-		return storedFileRepository.saveAndFlush(f);
+		return storedFileMetaRepository.saveAndFlush(f);
 	}
 
 	@Test
@@ -163,7 +172,7 @@ class PropertyGalleryControllerIT extends PostgresTestContainer {
 	void gallery_crud_flow() throws Exception {
 		String access = login();
 		Long propertyId = prepareProperty(access);
-		StoredFile f = prepareFile("public/2025/01/gallery-1.jpg");
+		StoredFileMeta f = prepareFile("public/2025/01/gallery-1.jpg");
 
 		String body = "{\"fileId\":" + Objects.requireNonNull(f.getFileId()) + "}";
 
@@ -197,7 +206,7 @@ class PropertyGalleryControllerIT extends PostgresTestContainer {
 	void gallery_error_cases() throws Exception {
 		String access = login();
 		Long propertyId = 999999L;
-		StoredFile f = prepareFile("public/2025/01/gallery-error.jpg");
+		StoredFileMeta f = prepareFile("public/2025/01/gallery-error.jpg");
 
 		// 404 when property not found on add
 		String body = "{\"fileId\":" + Objects.requireNonNull(f.getFileId()) + "}";
@@ -219,6 +228,158 @@ class PropertyGalleryControllerIT extends PostgresTestContainer {
 		mockMvc.perform(delete("/api/properties/{propertyId}/gallery/{fileId}", validPropertyId, 999999L)
 				.header(AUTH_HEADER, BEARER_PREFIX + access))
 			.andExpect(status().isNotFound());
+	}
+
+	@Test
+	@DisplayName("Add multiple files to gallery and list them")
+	void add_multiple_files() throws Exception {
+		String access = login();
+		Long propertyId = prepareProperty(access);
+		StoredFileMeta f1 = prepareFile("public/2025/01/gallery-multi-1.jpg");
+		StoredFileMeta f2 = prepareFile("public/2025/01/gallery-multi-2.jpg");
+		StoredFileMeta f3 = prepareFile("public/2025/01/gallery-multi-3.jpg");
+
+		// Add first file
+		mockMvc.perform(post("/api/properties/{propertyId}/gallery", propertyId)
+				.header(AUTH_HEADER, BEARER_PREFIX + access)
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content("{\"fileId\":" + Objects.requireNonNull(f1.getFileId()) + "}"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.fileId").value(f1.getFileId().intValue()));
+
+		// Add second file
+		mockMvc.perform(post("/api/properties/{propertyId}/gallery", propertyId)
+				.header(AUTH_HEADER, BEARER_PREFIX + access)
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content("{\"fileId\":" + Objects.requireNonNull(f2.getFileId()) + "}"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.fileId").value(f2.getFileId().intValue()));
+
+		// Add third file
+		mockMvc.perform(post("/api/properties/{propertyId}/gallery", propertyId)
+				.header(AUTH_HEADER, BEARER_PREFIX + access)
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content("{\"fileId\":" + Objects.requireNonNull(f3.getFileId()) + "}"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.fileId").value(f3.getFileId().intValue()));
+
+		// List all files
+		mockMvc.perform(get("/api/properties/{propertyId}/gallery", propertyId)
+				.header(AUTH_HEADER, BEARER_PREFIX + access))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.message").value("Property gallery files"))
+			.andExpect(jsonPath("$.data").isArray())
+			.andExpect(jsonPath("$.data.length()").value(3))
+			.andExpect(jsonPath("$.data[0].propertyId").value(propertyId.intValue()))
+			.andExpect(jsonPath("$.data[1].propertyId").value(propertyId.intValue()))
+			.andExpect(jsonPath("$.data[2].propertyId").value(propertyId.intValue()));
+	}
+
+	@Test
+	@DisplayName("Add duplicate file returns 409 Conflict")
+	void add_duplicate_file_conflict() throws Exception {
+		String access = login();
+		Long propertyId = prepareProperty(access);
+		StoredFileMeta f = prepareFile("public/2025/01/gallery-dup.jpg");
+
+		String body = "{\"fileId\":" + Objects.requireNonNull(f.getFileId()) + "}";
+
+		// Add first time - success
+		mockMvc.perform(post("/api/properties/{propertyId}/gallery", propertyId)
+				.header(AUTH_HEADER, BEARER_PREFIX + access)
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(body))
+			.andExpect(status().isOk());
+
+		// Add duplicate - conflict
+		mockMvc.perform(post("/api/properties/{propertyId}/gallery", propertyId)
+				.header(AUTH_HEADER, BEARER_PREFIX + access)
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(body))
+			.andExpect(status().isConflict());
+	}
+
+	@Test
+	@DisplayName("Add file with non-existent fileId returns 404")
+	void add_file_not_found() throws Exception {
+		String access = login();
+		Long propertyId = prepareProperty(access);
+
+		mockMvc.perform(post("/api/properties/{propertyId}/gallery", propertyId)
+				.header(AUTH_HEADER, BEARER_PREFIX + access)
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content("{\"fileId\":999999}"))
+			.andExpect(status().isNotFound());
+	}
+
+	@Test
+	@DisplayName("Get gallery for non-existent property returns 404")
+	void get_gallery_property_not_found() throws Exception {
+		String access = login();
+
+		mockMvc.perform(get("/api/properties/{propertyId}/gallery", 999999L)
+				.header(AUTH_HEADER, BEARER_PREFIX + access))
+			.andExpect(status().isNotFound());
+	}
+
+	@Test
+	@DisplayName("Delete file and verify it's removed from list")
+	void delete_file_removes_from_list() throws Exception {
+		String access = login();
+		Long propertyId = prepareProperty(access);
+		StoredFileMeta f1 = prepareFile("public/2025/01/gallery-del-1.jpg");
+		StoredFileMeta f2 = prepareFile("public/2025/01/gallery-del-2.jpg");
+
+		// Add two files
+		mockMvc.perform(post("/api/properties/{propertyId}/gallery", propertyId)
+				.header(AUTH_HEADER, BEARER_PREFIX + access)
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content("{\"fileId\":" + Objects.requireNonNull(f1.getFileId()) + "}"))
+			.andExpect(status().isOk());
+
+		mockMvc.perform(post("/api/properties/{propertyId}/gallery", propertyId)
+				.header(AUTH_HEADER, BEARER_PREFIX + access)
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content("{\"fileId\":" + Objects.requireNonNull(f2.getFileId()) + "}"))
+			.andExpect(status().isOk());
+
+		// Verify both files are in list
+		mockMvc.perform(get("/api/properties/{propertyId}/gallery", propertyId)
+				.header(AUTH_HEADER, BEARER_PREFIX + access))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.length()").value(2));
+
+		// Delete first file
+		mockMvc.perform(delete("/api/properties/{propertyId}/gallery/{fileId}", propertyId, f1.getFileId())
+				.header(AUTH_HEADER, BEARER_PREFIX + access))
+			.andExpect(status().isOk());
+
+		// Verify only second file remains
+		mockMvc.perform(get("/api/properties/{propertyId}/gallery", propertyId)
+				.header(AUTH_HEADER, BEARER_PREFIX + access))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.length()").value(1))
+			.andExpect(jsonPath("$.data[0].fileId").value(f2.getFileId().intValue()));
+	}
+
+	@Test
+	@DisplayName("Response includes correct filePath from StoredFileMeta")
+	void response_includes_file_path() throws Exception {
+		String access = login();
+		Long propertyId = prepareProperty(access);
+		StoredFileMeta f = prepareFile("public/2025/01/gallery-path.jpg");
+
+		mockMvc.perform(post("/api/properties/{propertyId}/gallery", propertyId)
+				.header(AUTH_HEADER, BEARER_PREFIX + access)
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content("{\"fileId\":" + Objects.requireNonNull(f.getFileId()) + "}"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.filePath").value(f.getRelativePath()));
+
+		mockMvc.perform(get("/api/properties/{propertyId}/gallery", propertyId)
+				.header(AUTH_HEADER, BEARER_PREFIX + access))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data[0].filePath").value(f.getRelativePath()));
 	}
 }
 

@@ -4,13 +4,13 @@ import com.qminh.apartment.dto.property_gallery.PropertyGalleryRes;
 import com.qminh.apartment.entity.Property;
 import com.qminh.apartment.entity.PropertyGallery;
 import com.qminh.apartment.entity.PropertyGalleryId;
-import com.qminh.apartment.entity.StoredFile;
+import com.qminh.apartment.entity.StoredFileMeta;
 import com.qminh.apartment.exception.ConflictException;
 import com.qminh.apartment.exception.ResourceNotFoundException;
 import com.qminh.apartment.mapper.PropertyGalleryMapper;
 import com.qminh.apartment.repository.PropertyGalleryRepository;
 import com.qminh.apartment.repository.PropertyRepository;
-import com.qminh.apartment.repository.StoredFileRepository;
+import com.qminh.apartment.repository.StoredFileMetaRepository;
 import com.qminh.apartment.service.IPropertyGalleryService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,18 +23,18 @@ import java.util.Objects;
 public class PropertyGalleryService implements IPropertyGalleryService {
 
 	private final PropertyRepository propertyRepository;
-	private final StoredFileRepository storedFileRepository;
+	private final StoredFileMetaRepository storedFileMetaRepository;
 	private final PropertyGalleryRepository galleryRepository;
 	private final PropertyGalleryMapper mapper;
 	private static final String PROPERTY_NOT_FOUND = "Property not found: ";
 	private static final String FILE_NOT_FOUND = "File not found: ";
 
 	public PropertyGalleryService(PropertyRepository propertyRepository,
-	                              StoredFileRepository storedFileRepository,
+	                              StoredFileMetaRepository storedFileMetaRepository,
 	                              PropertyGalleryRepository galleryRepository,
 	                              PropertyGalleryMapper mapper) {
 		this.propertyRepository = propertyRepository;
-		this.storedFileRepository = storedFileRepository;
+		this.storedFileMetaRepository = storedFileMetaRepository;
 		this.galleryRepository = galleryRepository;
 		this.mapper = mapper;
 	}
@@ -43,7 +43,7 @@ public class PropertyGalleryService implements IPropertyGalleryService {
 	public PropertyGalleryRes addFileIntoGallery(Long propertyId, Long fileId) {
 		Property property = propertyRepository.findById(Objects.requireNonNull(propertyId))
 			.orElseThrow(() -> new ResourceNotFoundException(PROPERTY_NOT_FOUND + propertyId));
-		StoredFile file = storedFileRepository.findById(Objects.requireNonNull(fileId))
+		StoredFileMeta file = storedFileMetaRepository.findById(Objects.requireNonNull(fileId))
 			.orElseThrow(() -> new ResourceNotFoundException(FILE_NOT_FOUND + fileId));
 
 		PropertyGalleryId id = new PropertyGalleryId(propertyId, fileId);
