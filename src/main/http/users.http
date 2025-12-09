@@ -15,3 +15,79 @@
 # }
 GET http://localhost:8080/api/users/me
 Authorization: Bearer {{ACCESS_TOKEN}}
+
+### Update current user profile
+# Request:
+#   PUT /api/users/me
+#   Headers: Authorization: Bearer {accessToken}
+#   Body: JSON
+# {
+#   "displayName": "New Name",
+#   "fullName": "Nguyen Van A",
+#   "phone": "0901234567"
+# }
+PUT http://localhost:8080/api/users/me
+Authorization: Bearer {{ACCESS_TOKEN}}
+Content-Type: application/json
+
+{
+  "displayName": "New Name",
+  "fullName": "Nguyen Van A",
+  "phone": "0901234567"
+}
+
+### Update user avatar (multipart/form-data) for current user
+# Request:
+#   PUT /api/users/me/avatar
+#   Headers: Authorization: Bearer {accessToken}
+#   Body: multipart/form-data with file field
+# Response 200:
+# {
+#   "message": "Avatar updated successfully",
+#   "data": {
+#     "id": 1,
+#     "username": "root",
+#     "email": "root@example.com",
+#     "displayName": "Root Admin",
+#     "roleName": "ADMIN",
+#     "fullName": null,
+#     "phone": null,
+#     "avatar": "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+#   },
+#   "meta": null,
+#   "error": null
+# }
+# Note: Image will be compressed to max 200x200px and converted to JPEG base64
+PUT http://localhost:8080/api/users/me/avatar
+Authorization: Bearer {{ACCESS_TOKEN}}
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="avatar.jpg"
+Content-Type: image/jpeg
+
+< ./test-avatar.jpg
+--boundary--
+
+### Delete user avatar of current user
+# Request:
+#   DELETE /api/users/me/avatar
+#   Headers: Authorization: Bearer {accessToken}
+# Response 200:
+# {
+#   "message": "Avatar deleted successfully",
+#   "data": {
+#     "id": 1,
+#     "username": "root",
+#     "email": "root@example.com",
+#     "displayName": "Root Admin",
+#     "roleName": "ADMIN",
+#     "fullName": null,
+#     "phone": null,
+#     "avatar": null
+#   },
+#   "meta": null,
+#   "error": null
+# }
+DELETE http://localhost:8080/api/users/me/avatar
+Authorization: Bearer {{ACCESS_TOKEN}}

@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
 import java.util.Objects;
@@ -142,6 +144,56 @@ class PropertyRepositoryTest extends PostgresTestContainer {
 		p3.setIsPublic(Boolean.TRUE);
 		assertThatThrownBy(() -> propertyRepository.saveAndFlush(p3))
 			.isInstanceOfAny(DataIntegrityViolationException.class, org.hibernate.PropertyValueException.class);
+	}
+
+	@Test
+	@DisplayName("findAllWithRelations fetches all related entities with EntityGraph")
+	void findAllWithRelations_fetches_all_related_entities() {
+		PropertyType type = new PropertyType(); type.setTypeName("TypeRel" + System.nanoTime());
+		typeRepository.saveAndFlush(type);
+		PropertyArea area = new PropertyArea(); area.setAreaName("AreaRel" + System.nanoTime()); area.setAreaLink("area-rel-" + System.nanoTime());
+		areaRepository.saveAndFlush(area);
+		Role role = roleRepository.findByRoleName("SALE").orElseGet(() -> {
+			Role r = new Role(); r.setRoleName("SALE"); return roleRepository.saveAndFlush(r);
+		});
+		User u = new User();
+		u.setUsername("saleRel" + System.nanoTime());
+		u.setEmail("saleRel" + System.nanoTime() + "@ex.com");
+		u.setPassword("x");
+		u.setDisplayName("Sale Display Name");
+		u.setRole(role);
+		u = userRepository.saveAndFlush(u);
+		PropertySaleInfo si = new PropertySaleInfo();
+		si.setUser(u);
+		si.setFullName("Sale Full Name");
+		si.setPhone("0901234567");
+		saleInfoRepository.saveAndFlush(si);
+
+		Property p = new Property();
+		p.setTitle("Property With Relations");
+		p.setPrice(new BigDecimal("1000000.00"));
+		p.setDescription("Test property");
+		p.setType(type);
+		p.setSaleInfo(si);
+		p.setArea(area);
+		p.setIsPublic(Boolean.TRUE);
+		p.setIsForRent(Boolean.FALSE);
+		Property saved = propertyRepository.saveAndFlush(p);
+
+		Specification<Property> spec = (root, query, cb) -> cb.equal(root.get("propertyId"), saved.getPropertyId());
+		var page = propertyRepository.findAllWithRelations(spec, PageRequest.of(0, 10));
+
+		assertThat(page.getContent()).hasSize(1);
+		Property fetched = page.getContent().get(0);
+		assertThat(fetched.getPropertyId()).isEqualTo(saved.getPropertyId());
+		assertThat(fetched.getType()).isNotNull();
+		assertThat(fetched.getType().getTypeName()).startsWith("TypeRel");
+		assertThat(fetched.getArea()).isNotNull();
+		assertThat(fetched.getArea().getAreaName()).startsWith("AreaRel");
+		assertThat(fetched.getSaleInfo()).isNotNull();
+		assertThat(fetched.getSaleInfo().getPhone()).isEqualTo("0901234567");
+		assertThat(fetched.getSaleInfo().getUser()).isNotNull();
+		assertThat(fetched.getSaleInfo().getUser().getDisplayName()).isEqualTo("Sale Display Name");
 	}
 }
 

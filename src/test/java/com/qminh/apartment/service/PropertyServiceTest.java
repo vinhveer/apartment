@@ -416,6 +416,95 @@ class PropertyServiceTest extends PostgresTestContainer {
 		assertThatThrownBy(() -> service.search(searchReq, null))
 			.isInstanceOf(NullPointerException.class);
 	}
+
+	@Test
+	@Transactional
+	@DisplayName("searchFull returns PropertySelectRes with full related data")
+	void searchFull_returns_full_related_data() {
+		PropertyCreateReq req = new PropertyCreateReq();
+		req.setTitle("Prop Full Test");
+		req.setPrice(new BigDecimal("2000000000.00"));
+		req.setDescription("Full test property");
+		req.setTypeId(typeId);
+		req.setSaleUserId(saleUserId);
+		req.setAreaId(areaId);
+		req.setIsPublic(true);
+		req.setIsForRent(true);
+		var created = service.create(req);
+
+		PropertySearchReq searchReq = new PropertySearchReq();
+		searchReq.setQ("Full Test");
+		Pageable pageable = PageRequest.of(0, 10);
+		var result = service.searchFull(searchReq, pageable);
+
+		assertThat(result.getContent()).hasSize(1);
+		var selectRes = result.getContent().get(0);
+		assertThat(selectRes.getPropertyId()).isEqualTo(created.getPropertyId());
+		assertThat(selectRes.getTitle()).isEqualTo("Prop Full Test");
+		assertThat(selectRes.getType()).isNotNull();
+		assertThat(selectRes.getType().getTypeId()).isEqualTo(typeId);
+		assertThat(selectRes.getType().getTypeName()).isEqualTo("TypeS");
+		assertThat(selectRes.getArea()).isNotNull();
+		assertThat(selectRes.getArea().getAreaId()).isEqualTo(areaId);
+		assertThat(selectRes.getArea().getAreaName()).isEqualTo("AreaS");
+		assertThat(selectRes.getArea().getAreaLink()).isEqualTo("area-s");
+		assertThat(selectRes.getSaleInfo()).isNotNull();
+		assertThat(selectRes.getSaleInfo().getUserId()).isEqualTo(saleUserId);
+		assertThat(selectRes.getSaleInfo().getPhone()).isEqualTo("0900");
+		assertThat(selectRes.getDetails()).isNotNull();
+		assertThat(selectRes.getGalleries()).isNotNull();
+	}
+
+	@Test
+	@Transactional
+	@DisplayName("searchFull with filters returns correct results")
+	void searchFull_with_filters_returns_correct_results() {
+		PropertyCreateReq req1 = new PropertyCreateReq();
+		req1.setTitle("Vinhome Full");
+		req1.setPrice(new BigDecimal("2000000000.00"));
+		req1.setDescription("Luxury");
+		req1.setTypeId(typeId);
+		req1.setSaleUserId(saleUserId);
+		req1.setAreaId(areaId);
+		req1.setIsPublic(true);
+		req1.setIsForRent(true);
+		service.create(req1);
+
+		PropertyCreateReq req2 = new PropertyCreateReq();
+		req2.setTitle("Another Full");
+		req2.setPrice(new BigDecimal("5000000000.00"));
+		req2.setDescription("Normal");
+		req2.setTypeId(typeId);
+		req2.setSaleUserId(saleUserId);
+		req2.setAreaId(areaId);
+		req2.setIsPublic(true);
+		req2.setIsForRent(false);
+		service.create(req2);
+
+		PropertySearchReq searchReq = new PropertySearchReq();
+		searchReq.setQ("vinhome");
+		searchReq.setIsForRent(true);
+		searchReq.setMinPrice(new BigDecimal("1000000000.00"));
+		searchReq.setMaxPrice(new BigDecimal("3000000000.00"));
+		Pageable pageable = PageRequest.of(0, 10);
+		var result = service.searchFull(searchReq, pageable);
+
+		assertThat(result.getContent()).hasSize(1);
+		var selectRes = result.getContent().get(0);
+		assertThat(selectRes.getTitle()).isEqualTo("Vinhome Full");
+		assertThat(selectRes.getType()).isNotNull();
+		assertThat(selectRes.getArea()).isNotNull();
+		assertThat(selectRes.getSaleInfo()).isNotNull();
+	}
+
+	@Test
+	@Transactional
+	@DisplayName("searchFull null pageable throws npe")
+	void searchFull_null_pageable_throws_npe() {
+		PropertySearchReq searchReq = new PropertySearchReq();
+		assertThatThrownBy(() -> service.searchFull(searchReq, null))
+			.isInstanceOf(NullPointerException.class);
+	}
 }
 
 

@@ -128,6 +128,24 @@ class UserRepositoryTest extends PostgresTestContainer {
 		assertThat(pageFiltered.getContent()).extracting(User::getUsername).contains("adminY");
 		assertThat(pageFiltered.getContent()).extracting(User::getUsername).doesNotContain("saleX");
 	}
+
+	@Test
+	@DisplayName("avatar field is persisted and loaded correctly")
+	void avatar_persisted() {
+		Role role = roleRepository.findByRoleName("USER").orElseGet(() -> {
+			Role r = new Role(); r.setRoleName("USER"); return roleRepository.saveAndFlush(r);
+		});
+		User u = new User();
+		u.setUsername("avatarRepo");
+		u.setEmail("avatarRepo@example.com");
+		u.setPassword("x");
+		u.setRole(role);
+		u.setAvatar("data:image/jpeg;base64,xxx");
+		userRepository.saveAndFlush(u);
+
+		User found = userRepository.findByUsername("avatarRepo").orElseThrow();
+		assertThat(found.getAvatar()).isEqualTo("data:image/jpeg;base64,xxx");
+	}
 }
 
 

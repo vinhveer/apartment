@@ -36,13 +36,43 @@ public class SecurityConfig {
 			.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.cors(Customizer.withDefaults())
 			.authorizeHttpRequests(reg -> reg
+				// CORS preflight
+				.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+				// Files
 				.requestMatchers(HttpMethod.POST, "/api/files").authenticated()
 				.requestMatchers(HttpMethod.GET, "/api/files/**").permitAll()
-				.requestMatchers(HttpMethod.POST, "/api/create-sale").authenticated()
-				.requestMatchers(HttpMethod.POST, "/api/create-admin").authenticated()
+
+				// Static files (public uploads)
+				.requestMatchers(HttpMethod.GET, "/public/**").permitAll()
+
+				// Auth
 				.requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
 				.requestMatchers(HttpMethod.POST, "/api/auth/refresh").permitAll()
 				.requestMatchers(HttpMethod.POST, "/api/auth/logout").permitAll()
+
+				// Account creation (requires auth)
+				.requestMatchers(HttpMethod.POST, "/api/create-sale").authenticated()
+				.requestMatchers(HttpMethod.POST, "/api/create-admin").authenticated()
+
+				// Property - public read/search
+				.requestMatchers(HttpMethod.GET, "/api/properties").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/properties/**").permitAll()
+				.requestMatchers(HttpMethod.POST, "/api/properties/search").permitAll()
+
+				// Property Type - public read
+				.requestMatchers(HttpMethod.GET, "/api/property-types").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/property-types/**").permitAll()
+
+				// Property Area - public read
+				.requestMatchers(HttpMethod.GET, "/api/areas").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/areas/**").permitAll()
+
+				// Property Define Details - public read
+				.requestMatchers(HttpMethod.GET, "/api/property-define-details").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/property-define-details/**").permitAll()
+
+				// All other requests require authentication
 				.anyRequest().authenticated()
 			)
 			.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

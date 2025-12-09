@@ -56,7 +56,8 @@ public class AccountService implements IAccountService {
 		if (!roleName.equals("ADMIN") && !roleName.equals("SALE")) {
 			throw new IllegalArgumentException("roleName must be ADMIN or SALE");
 		}
-		Role role = roleRepository.findByRoleName(roleName).orElseThrow();
+		Role role = roleRepository.findByRoleName(roleName)
+			.orElseThrow(() -> new IllegalArgumentException("Role not found: " + roleName));
 		User user = userMapper.toEntity(req);
 		user.setPassword(passwordEncoder.encode(req.getPassword()));
 		user.setRole(role);

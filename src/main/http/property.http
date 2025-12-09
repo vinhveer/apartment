@@ -87,11 +87,29 @@ Content-Type: application/json
 	"createdTo": "2025-02-01T00:00:00"
 }
 
-### Advanced search - empty body (returns all)
-POST http://localhost:8080/api/properties/search?page=0&size=10
+### Advanced search - empty body (returns all) - mode=list (default)
+POST http://localhost:8080/api/properties/search?page=0&size=10&mode=list
 Content-Type: application/json
 
 {
+}
+
+### Search with mode=select (returns full related data: type, area, saleInfo, galleries, details)
+POST http://localhost:8080/api/properties/search?page=0&size=10&mode=select
+Content-Type: application/json
+
+{
+}
+
+### Search with mode=select and filters
+POST http://localhost:8080/api/properties/search?page=0&size=10&sort=createdAt,desc&mode=select
+Content-Type: application/json
+
+{
+	"q": "vinhome",
+	"isForRent": true,
+	"minPrice": 1000000000,
+	"maxPrice": 3000000000
 }
 
 

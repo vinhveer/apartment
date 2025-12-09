@@ -348,6 +348,129 @@ class PropertyControllerIT extends PostgresTestContainer {
 			.andExpect(jsonPath("$.data.content").isArray())
 			.andExpect(jsonPath("$.meta.total").exists());
 	}
+
+	@Test
+	@DisplayName("search with mode=list returns summary fields (typeName, areaName, saleDisplayName, salePhone)")
+	void search_mode_list_returns_summary_fields() throws Exception {
+		PropertyCreateReq req = new PropertyCreateReq();
+		req.setTitle("Prop Mode List");
+		req.setPrice(new BigDecimal("1000000.00"));
+		req.setDescription("d");
+		req.setTypeId(Objects.requireNonNull(typeId));
+		req.setSaleUserId(Objects.requireNonNull(saleUserId));
+		req.setAreaId(Objects.requireNonNull(areaId));
+		req.setIsPublic(true);
+		req.setIsForRent(false);
+		mockMvc.perform(post("/api/properties")
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(Objects.requireNonNull(mapper.writeValueAsString(req))))
+			.andExpect(status().isOk());
+
+		PropertySearchReq searchReq = new PropertySearchReq();
+
+		mockMvc.perform(post("/api/properties/search?page=0&size=10&mode=list")
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(Objects.requireNonNull(mapper.writeValueAsString(searchReq))))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.message").value("Property search result"))
+			.andExpect(jsonPath("$.data.content").isArray())
+			.andExpect(jsonPath("$.data.content[0].typeName").value("TypeA"))
+			.andExpect(jsonPath("$.data.content[0].areaName").value("AreaA"))
+			.andExpect(jsonPath("$.data.content[0].salePhone").value("0900000000"))
+			.andExpect(jsonPath("$.meta.total").exists());
+	}
+
+	@Test
+	@DisplayName("search with mode=select returns full related data (type, area, saleInfo, galleries, details)")
+	void search_mode_select_returns_full_data() throws Exception {
+		PropertyCreateReq req = new PropertyCreateReq();
+		req.setTitle("Prop Mode Select");
+		req.setPrice(new BigDecimal("2000000000.00"));
+		req.setDescription("Luxury property");
+		req.setTypeId(Objects.requireNonNull(typeId));
+		req.setSaleUserId(Objects.requireNonNull(saleUserId));
+		req.setAreaId(Objects.requireNonNull(areaId));
+		req.setIsPublic(true);
+		req.setIsForRent(true);
+		String createRes = mockMvc.perform(post("/api/properties")
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(Objects.requireNonNull(mapper.writeValueAsString(req))))
+			.andExpect(status().isOk())
+			.andReturn().getResponse().getContentAsString();
+		long propId = mapper.readTree(createRes).path("data").path("propertyId").asLong();
+
+		PropertySearchReq searchReq = new PropertySearchReq();
+		searchReq.setQ("Mode Select");
+
+		mockMvc.perform(post("/api/properties/search?page=0&size=10&mode=select")
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(Objects.requireNonNull(mapper.writeValueAsString(searchReq))))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.message").value("Property search result (select)"))
+			.andExpect(jsonPath("$.data.content").isArray())
+			.andExpect(jsonPath("$.data.content[0].propertyId").value(propId))
+			.andExpect(jsonPath("$.data.content[0].title").value("Prop Mode Select"))
+			.andExpect(jsonPath("$.data.content[0].type.typeId").value(typeId))
+			.andExpect(jsonPath("$.data.content[0].type.typeName").value("TypeA"))
+			.andExpect(jsonPath("$.data.content[0].area.areaId").value(areaId))
+			.andExpect(jsonPath("$.data.content[0].area.areaName").value("AreaA"))
+			.andExpect(jsonPath("$.data.content[0].area.areaLink").value("area-a"))
+			.andExpect(jsonPath("$.data.content[0].saleInfo.userId").value(saleUserId))
+			.andExpect(jsonPath("$.data.content[0].saleInfo.phone").value("0900000000"))
+			.andExpect(jsonPath("$.data.content[0].details").isArray())
+			.andExpect(jsonPath("$.data.content[0].galleries").isArray())
+			.andExpect(jsonPath("$.meta.total").exists());
+	}
+
+	@Test
+	@DisplayName("search with mode=select and filters works correctly")
+	void search_mode_select_with_filters() throws Exception {
+		PropertyCreateReq req1 = new PropertyCreateReq();
+		req1.setTitle("Vinhome Select");
+		req1.setPrice(new BigDecimal("2000000000.00"));
+		req1.setDescription("Luxury");
+		req1.setTypeId(Objects.requireNonNull(typeId));
+		req1.setSaleUserId(Objects.requireNonNull(saleUserId));
+		req1.setAreaId(Objects.requireNonNull(areaId));
+		req1.setIsPublic(true);
+		req1.setIsForRent(true);
+		mockMvc.perform(post("/api/properties")
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(Objects.requireNonNull(mapper.writeValueAsString(req1))))
+			.andExpect(status().isOk());
+
+		PropertyCreateReq req2 = new PropertyCreateReq();
+		req2.setTitle("Another Select");
+		req2.setPrice(new BigDecimal("5000000000.00"));
+		req2.setDescription("Normal");
+		req2.setTypeId(Objects.requireNonNull(typeId));
+		req2.setSaleUserId(Objects.requireNonNull(saleUserId));
+		req2.setAreaId(Objects.requireNonNull(areaId));
+		req2.setIsPublic(true);
+		req2.setIsForRent(false);
+		mockMvc.perform(post("/api/properties")
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(Objects.requireNonNull(mapper.writeValueAsString(req2))))
+			.andExpect(status().isOk());
+
+		PropertySearchReq searchReq = new PropertySearchReq();
+		searchReq.setQ("vinhome");
+		searchReq.setIsForRent(true);
+		searchReq.setMinPrice(new BigDecimal("1000000000.00"));
+		searchReq.setMaxPrice(new BigDecimal("3000000000.00"));
+
+		mockMvc.perform(post("/api/properties/search?page=0&size=10&mode=select")
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(Objects.requireNonNull(mapper.writeValueAsString(searchReq))))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.message").value("Property search result (select)"))
+			.andExpect(jsonPath("$.data.content").isArray())
+			.andExpect(jsonPath("$.data.content[0].title").value("Vinhome Select"))
+			.andExpect(jsonPath("$.data.content[0].type.typeName").value("TypeA"))
+			.andExpect(jsonPath("$.data.content[0].area.areaName").value("AreaA"))
+			.andExpect(jsonPath("$.data.content[0].saleInfo.phone").value("0900000000"))
+			.andExpect(jsonPath("$.meta.total").value(1));
+	}
 }
 
 

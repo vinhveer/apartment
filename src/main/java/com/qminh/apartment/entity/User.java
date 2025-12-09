@@ -46,6 +46,9 @@ public class User {
 	@Column(name = "updated_at")
 	private LocalDateTime updatedAt;
 
+	@Column(name = "avatar", columnDefinition = "TEXT")
+	private String avatar;
+
 	@OneToOne(mappedBy = "user", fetch = FetchType.LAZY, optional = true)
 	private PropertySaleInfo propertySaleInfo;
 }

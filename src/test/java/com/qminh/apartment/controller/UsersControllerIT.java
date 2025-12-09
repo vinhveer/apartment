@@ -95,8 +95,7 @@ class UsersControllerIT extends PostgresTestContainer {
 			.andExpect(jsonPath("$.message").value("Me"))
 			.andExpect(jsonPath("$.data.id").exists())
 			.andExpect(jsonPath("$.data.username").value("root"))
-			.andExpect(jsonPath("$.data.roles").isArray())
-			.andExpect(jsonPath("$.data.roles[0]").value("ROLE_ADMIN"));
+			.andExpect(jsonPath("$.data.roleName").value("ADMIN"));
 	}
 
 	@Test
@@ -108,7 +107,7 @@ class UsersControllerIT extends PostgresTestContainer {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.message").value("Me"))
 			.andExpect(jsonPath("$.data.username").value("sale01"))
-			.andExpect(jsonPath("$.data.roles[0]").value("ROLE_SALE"));
+			.andExpect(jsonPath("$.data.roleName").value("SALE"));
 	}
 
 	@Test
@@ -120,7 +119,22 @@ class UsersControllerIT extends PostgresTestContainer {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.message").value("Me"))
 			.andExpect(jsonPath("$.data.username").value("user01"))
-			.andExpect(jsonPath("$.data.roles[0]").value("ROLE_USER"));
+			.andExpect(jsonPath("$.data.roleName").value("USER"));
+	}
+
+	@Test
+	@DisplayName("updateMe updates current user's profile fields only")
+	void update_me_updates_profile() throws Exception {
+		String access = login("user01", "123456");
+		String body = "{\"displayName\":\"New Display\",\"fullName\":\"User One\",\"phone\":\"0900999888\"}";
+		mockMvc.perform(put("/api/users/me")
+				.header("Authorization", "Bearer " + access)
+				.contentType(MediaType.APPLICATION_JSON_VALUE)
+				.content(body))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.message").value("Update profile successfully"))
+			.andExpect(jsonPath("$.data.username").value("user01"))
+			.andExpect(jsonPath("$.data.displayName").value("New Display"));
 	}
 
 	@Test

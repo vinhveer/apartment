@@ -4,6 +4,7 @@ import com.qminh.apartment.dto.ApiResponse;
 import com.qminh.apartment.dto.property.PropertyCreateReq;
 import com.qminh.apartment.dto.property.PropertyRes;
 import com.qminh.apartment.dto.property.PropertySearchReq;
+import com.qminh.apartment.dto.property.PropertySelectRes;
 import com.qminh.apartment.dto.property.PropertyUpdateReq;
 import com.qminh.apartment.service.IPropertyService;
 import jakarta.validation.Valid;
@@ -31,8 +32,8 @@ public class PropertyController {
 	}
 
 	@GetMapping("/{id}")
-	public ResponseEntity<ApiResponse<PropertyRes>> get(@PathVariable Long id) {
-		PropertyRes res = service.get(id);
+	public ResponseEntity<ApiResponse<PropertySelectRes>> get(@PathVariable Long id) {
+		PropertySelectRes res = service.getFull(id);
 		return ResponseEntity.ok(ApiResponse.ok("Property detail", res));
 	}
 
@@ -48,13 +49,19 @@ public class PropertyController {
 	}
 
 	@PostMapping("/search")
-	public ResponseEntity<ApiResponse<Page<PropertyRes>>> search(
+	public ResponseEntity<ApiResponse<? extends Page<?>>> search(
 		@RequestBody PropertySearchReq req,
 		@RequestParam(defaultValue = "0") int page,
 		@RequestParam(defaultValue = "10") int size,
-		@RequestParam(required = false) String sort
+		@RequestParam(required = false) String sort,
+		@RequestParam(defaultValue = "list") String mode
 	) {
 		Pageable pageable = buildPageable(page, size, sort);
+		if ("select".equalsIgnoreCase(mode)) {
+			Page<PropertySelectRes> res = service.searchFull(req, pageable);
+			var meta = new ApiResponse.Meta(page, size, res.getTotalElements());
+			return ResponseEntity.ok(ApiResponse.ok("Property search result (select)", res, meta));
+		}
 		Page<PropertyRes> res = service.search(req, pageable);
 		var meta = new ApiResponse.Meta(page, size, res.getTotalElements());
 		return ResponseEntity.ok(ApiResponse.ok("Property search result", res, meta));

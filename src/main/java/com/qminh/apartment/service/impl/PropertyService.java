@@ -3,6 +3,7 @@ package com.qminh.apartment.service.impl;
 import com.qminh.apartment.dto.property.PropertyCreateReq;
 import com.qminh.apartment.dto.property.PropertyRes;
 import com.qminh.apartment.dto.property.PropertySearchReq;
+import com.qminh.apartment.dto.property.PropertySelectRes;
 import com.qminh.apartment.dto.property.PropertyUpdateReq;
 import com.qminh.apartment.entity.Property;
 import com.qminh.apartment.entity.PropertyArea;
@@ -68,6 +69,15 @@ public class PropertyService implements IPropertyService {
 	}
 
 	@Transactional(readOnly = true)
+	public PropertySelectRes getFull(long id) {
+		Property entity = repository.findByIdWithRelations(id);
+		if (entity == null) {
+			throw new ResourceNotFoundException(NOT_FOUND + id);
+		}
+		return mapper.toSelectRes(entity);
+	}
+
+	@Transactional(readOnly = true)
 	public Page<PropertyRes> list(Pageable pageable) {
 		Objects.requireNonNull(pageable, "pageable must not be null");
 		return repository.findAll(pageable).map(mapper::toRes);
@@ -78,6 +88,13 @@ public class PropertyService implements IPropertyService {
 		Objects.requireNonNull(pageable, "pageable must not be null");
 		var spec = PropertySpecifications.bySearchReq(req);
 		return repository.findAll(spec, pageable).map(mapper::toRes);
+	}
+
+	@Transactional(readOnly = true)
+	public Page<PropertySelectRes> searchFull(PropertySearchReq req, Pageable pageable) {
+		Objects.requireNonNull(pageable, "pageable must not be null");
+		var spec = PropertySpecifications.bySearchReq(req);
+		return repository.findAllWithRelations(spec, pageable).map(mapper::toSelectRes);
 	}
 
 	@Transactional
