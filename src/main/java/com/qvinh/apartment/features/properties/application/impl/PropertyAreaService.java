@@ -5,6 +5,7 @@ import com.qvinh.apartment.features.properties.domain.PropertyArea;
 import com.qvinh.apartment.features.properties.dto.property_area.PropertyAreaCreateReq;
 import com.qvinh.apartment.features.properties.dto.property_area.PropertyAreaRes;
 import com.qvinh.apartment.features.properties.dto.property_area.PropertyAreaUpdateReq;
+import com.qvinh.apartment.features.properties.constants.PropertiesMessages;
 import com.qvinh.apartment.shared.error.ErrorCode;
 import com.qvinh.apartment.shared.exception.ResourceNotFoundException;
 import com.qvinh.apartment.features.properties.mapper.PropertyAreaMapper;
@@ -19,6 +20,8 @@ import java.util.Objects;
 @Service
 public class PropertyAreaService implements IPropertyAreaService {
 
+	private static final String AREA_NOT_NULL = "area must not be null";
+
 	private final PropertyAreaRepository repository;
 	private final PropertyAreaMapper mapper;
 
@@ -30,7 +33,7 @@ public class PropertyAreaService implements IPropertyAreaService {
 	@Transactional
 	public PropertyAreaRes create(PropertyAreaCreateReq req) {
 		PropertyArea area = mapper.toEntity(req);
-		PropertyArea updated = repository.save(Objects.requireNonNull(area, "area must not be null"));
+		PropertyArea updated = repository.save(Objects.requireNonNull(area, AREA_NOT_NULL));
 		PropertyArea saved = Objects.requireNonNull(updated, "updated must not be null");
 		return mapper.toRes(saved);
 	}
@@ -38,7 +41,7 @@ public class PropertyAreaService implements IPropertyAreaService {
 	@Transactional(readOnly = true)
 	public PropertyAreaRes get(int id) {
 		PropertyArea area = repository.findById(id)
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_AREA_NOT_FOUND, "Area not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_AREA_NOT_FOUND, PropertiesMessages.PROPERTY_AREA_NOT_FOUND));
 		return mapper.toRes(area);
 	}
 
@@ -51,16 +54,16 @@ public class PropertyAreaService implements IPropertyAreaService {
 	@Transactional
 	public PropertyAreaRes update(int id, PropertyAreaUpdateReq req) {
 		PropertyArea area = repository.findById(id)
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_AREA_NOT_FOUND, "Area not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_AREA_NOT_FOUND, PropertiesMessages.PROPERTY_AREA_NOT_FOUND));
 		mapper.updateEntityFromReq(req, area);
-		PropertyArea updated = repository.save(Objects.requireNonNull(area, "area must not be null"));
+		PropertyArea updated = repository.save(Objects.requireNonNull(area, AREA_NOT_NULL));
 		return mapper.toRes(updated);
 	}
 
 	@Transactional
 	public void delete(int id) {
 		PropertyArea area = repository.findById(id)
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_AREA_NOT_FOUND, "Area not found"));
-		repository.delete(Objects.requireNonNull(area, "area must not be null"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_AREA_NOT_FOUND, PropertiesMessages.PROPERTY_AREA_NOT_FOUND));
+		repository.delete(Objects.requireNonNull(area, AREA_NOT_NULL));
 	}
 }

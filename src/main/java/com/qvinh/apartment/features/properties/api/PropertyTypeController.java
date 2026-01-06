@@ -13,8 +13,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/property-types")
+@RequestMapping(PropertyTypeController.BASE_PATH)
 public class PropertyTypeController {
+
+	public static final String BASE_PATH = "/api/property-types";
+	public static final String BASE_PATH_ALL = BASE_PATH + "/**";
 
 	private final IPropertyTypeService service;
 

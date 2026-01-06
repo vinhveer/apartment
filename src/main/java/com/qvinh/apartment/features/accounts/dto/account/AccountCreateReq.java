@@ -4,6 +4,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import com.qvinh.apartment.shared.constants.RoleNames;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -32,6 +33,6 @@ public class AccountCreateReq {
 	private String phone;
 
 	@NotBlank
-	@Pattern(regexp = "^(ADMIN|SALE)$")
+	@Pattern(regexp = RoleNames.EMPLOYEE_ROLE_REGEX)
 	private String roleName;
 }

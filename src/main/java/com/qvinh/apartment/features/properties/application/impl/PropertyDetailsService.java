@@ -1,6 +1,7 @@
 package com.qvinh.apartment.features.properties.application.impl;
 
 import com.qvinh.apartment.features.properties.application.IPropertyDetailsService;
+import com.qvinh.apartment.features.properties.constants.PropertiesMessages;
 import com.qvinh.apartment.features.properties.domain.Property;
 import com.qvinh.apartment.features.properties.domain.PropertyDefineDetails;
 import com.qvinh.apartment.features.properties.domain.PropertyDetails;
@@ -44,21 +45,21 @@ public class PropertyDetailsService implements IPropertyDetailsService {
 	@Transactional
 	public List<PropertyDetailsRes> create(Long propertyId, PropertyDetailsCreateReq req) {
 		Property property = propertyRepository.findById(Objects.requireNonNull(propertyId))
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_NOT_FOUND, "Property not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_NOT_FOUND, PropertiesMessages.PROPERTY_NOT_FOUND));
 
 		List<Integer> reqIds = Objects.requireNonNull(req.getItems()).stream()
 			.map(it -> Objects.requireNonNull(it.getDetailId()))
 			.distinct()
-			.collect(Collectors.toList());
+			.toList();
 
 		List<PropertyDefineDetails> defines = defineRepository.findAllById(Objects.requireNonNull(reqIds));
 		if (defines.size() != reqIds.size()) {
-			throw new ResourceNotFoundException(ErrorCode.PROPERTY_DEFINE_DETAIL_NOT_FOUND, "Define details not found");
+			throw new ResourceNotFoundException(ErrorCode.PROPERTY_DEFINE_DETAIL_NOT_FOUND, PropertiesMessages.DEFINE_DETAILS_NOT_FOUND);
 		}
 
 		long existing = repository.countById_PropertyIdAndId_DetailIdIn(propertyId, reqIds);
 		if (existing > 0) {
-			throw new ConflictException(ErrorCode.PROPERTY_DETAILS_CONFLICT, "Some details already exist for property");
+			throw new ConflictException(ErrorCode.PROPERTY_DETAILS_CONFLICT, PropertiesMessages.PROPERTY_DETAILS_CONFLICT);
 		}
 
 		Map<Integer, PropertyDefineDetails> defById = defines.stream()
@@ -92,18 +93,18 @@ public class PropertyDetailsService implements IPropertyDetailsService {
 	@Transactional
 	public List<PropertyDetailsRes> update(Long propertyId, PropertyDetailsUpdateReq req) {
 		Objects.requireNonNull(propertyRepository.findById(Objects.requireNonNull(propertyId))
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_NOT_FOUND, "Property not found")));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_NOT_FOUND, PropertiesMessages.PROPERTY_NOT_FOUND)));
 
 		List<Integer> reqIds = Objects.requireNonNull(req.getItems()).stream()
 			.map(it -> Objects.requireNonNull(it.getDetailId()))
 			.distinct()
-			.collect(Collectors.toList());
+			.toList();
 
 		// Verify all target details exist
 		Map<Integer, PropertyDetails> existingMap = new HashMap<>();
 		for (Integer detailId : reqIds) {
 			PropertyDetails pd = repository.findById_DetailIdAndId_PropertyId(detailId, propertyId)
-				.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_DETAIL_NOT_FOUND, "Property detail not found"));
+				.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_DETAIL_NOT_FOUND, PropertiesMessages.PROPERTY_DETAIL_NOT_FOUND));
 			existingMap.put(detailId, pd);
 		}
 
@@ -131,7 +132,7 @@ public class PropertyDetailsService implements IPropertyDetailsService {
 	@Transactional(readOnly = true)
 	public List<PropertyDetailsRes> listByProperty(Long propertyId) {
 		Property property = propertyRepository.findById(Objects.requireNonNull(propertyId))
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_NOT_FOUND, "Property not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_NOT_FOUND, PropertiesMessages.PROPERTY_NOT_FOUND));
 		return repository.findByProperty_PropertyId(property.getPropertyId())
 			.stream().map(mapper::toRes).toList();
 	}
@@ -140,14 +141,14 @@ public class PropertyDetailsService implements IPropertyDetailsService {
 	public void deleteOne(Long propertyId, Integer detailId) {
 		PropertyDetails entity = repository.findById_DetailIdAndId_PropertyId(
 			Objects.requireNonNull(detailId), Objects.requireNonNull(propertyId)
-		).orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_DETAIL_NOT_FOUND, "Property detail not found"));
+		).orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_DETAIL_NOT_FOUND, PropertiesMessages.PROPERTY_DETAIL_NOT_FOUND));
 		repository.delete(Objects.requireNonNull(entity));
 	}
 
 	@Transactional
 	public void deleteAll(Long propertyId) {
 		Objects.requireNonNull(propertyRepository.findById(Objects.requireNonNull(propertyId))
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_NOT_FOUND, "Property not found")));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_NOT_FOUND, PropertiesMessages.PROPERTY_NOT_FOUND)));
 		repository.deleteById_PropertyId(propertyId);
 	}
 }

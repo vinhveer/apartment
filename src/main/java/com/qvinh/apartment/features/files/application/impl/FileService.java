@@ -1,8 +1,10 @@
 package com.qvinh.apartment.features.files.application.impl;
 
 import com.qvinh.apartment.features.files.application.IFileService;
+import com.qvinh.apartment.features.files.constants.FilesMessages;
 import com.qvinh.apartment.features.files.domain.StoredFileMeta;
 import com.qvinh.apartment.features.files.domain.StoredFileVariant;
+import com.qvinh.apartment.shared.constants.DefaultValues;
 import com.qvinh.apartment.shared.error.ErrorCode;
 import com.qvinh.apartment.shared.exception.ResourceNotFoundException;
 import com.qvinh.apartment.features.files.persistence.StoredFileMetaRepository;
@@ -142,7 +144,7 @@ public class FileService implements IFileService {
 	@Transactional
 	public StoredFileMeta rename(Long fileId, String originalName) {
 		StoredFileMeta meta = fileRepo.findById(Objects.requireNonNull(fileId, "fileId must not be null"))
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.FILE_NOT_FOUND, "File not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.FILE_NOT_FOUND, FilesMessages.FILE_NOT_FOUND));
 		String sanitized = sanitizeOriginalName(Objects.requireNonNull(originalName, "originalName must not be null"));
 		meta.setOriginalName(sanitized);
 		return Objects.requireNonNull(fileRepo.save(meta), "saved meta must not be null");
@@ -151,7 +153,7 @@ public class FileService implements IFileService {
 	@Transactional
 	public void delete(Long fileId) {
 		StoredFileMeta meta = fileRepo.findById(Objects.requireNonNull(fileId))
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.FILE_NOT_FOUND, "File not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.FILE_NOT_FOUND, FilesMessages.FILE_NOT_FOUND));
 		Long id = Objects.requireNonNull(meta.getFileId());
 		// delete variants first
 		var variants = variantRepo.findByFile_FileId(id);
@@ -182,46 +184,26 @@ public class FileService implements IFileService {
 		Pageable pageable
 	) {
 		Objects.requireNonNull(pageable, "pageable must not be null");
-		LocalDateTime from = createdFrom != null ? createdFrom.atStartOfDay() : null;
-		LocalDateTime to = createdTo != null ? createdTo.atTime(23, 59, 59) : null;
-		String access = accessLevel != null && !accessLevel.isBlank()
-			? accessLevel.trim().toUpperCase(Locale.ROOT)
-			: null;
-		String mime = null;
-		if (mimeType != null && !mimeType.isBlank()) {
-			String mt = mimeType.trim().toLowerCase(Locale.ROOT);
-			if (!mt.contains("/")) {
-				// "image" -> "image/%"
-				mime = mt + "/%";
-			} else {
-				mime = mt;
-			}
-		}
-		String q = null;
-		if (search != null && !search.isBlank()) {
-			q = "%" + search.trim() + "%";
-		}
+		LocalDateTime from = startOfDay(createdFrom);
+		LocalDateTime to = endOfDay(createdTo);
+		String access = normalizeAccessLevel(accessLevel);
+		String mime = normalizeMimeType(mimeType);
+		String q = normalizeSearch(search);
+
 		Page<StoredFileMeta> base = fileRepo.search(access, mime, q, pageable);
-		if (from == null && to == null) {
-			return base;
-		}
-		java.util.List<StoredFileMeta> filtered = base.getContent().stream()
-			.filter(m -> {
-				LocalDateTime ts = m.getCreatedAt();
-				if (ts == null) return false;
-				if (from != null && ts.isBefore(from)) return false;
-				if (to != null && ts.isAfter(to)) return false;
-				return true;
-			})
+		if (from == null && to == null) return base;
+
+		List<StoredFileMeta> filtered = base.getContent().stream()
+			.filter(m -> isWithinCreatedAt(m, from, to))
 			.toList();
+
 		return new org.springframework.data.domain.PageImpl<>(filtered, pageable, filtered.size());
 	}
 
 	@Transactional
-	@SuppressWarnings("null")
 	public StoredFileMeta updateMeta(Long fileId, FileMetaUpdateReq req) {
 		StoredFileMeta meta = fileRepo.findById(Objects.requireNonNull(fileId, "fileId must not be null"))
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.FILE_NOT_FOUND, "File not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.FILE_NOT_FOUND, FilesMessages.FILE_NOT_FOUND));
 		if (req.getAltText() != null) {
 			meta.setAltText(req.getAltText());
 		}
@@ -241,6 +223,34 @@ public class FileService implements IFileService {
 		}
 		StoredFileMeta savedMeta = fileRepo.save(meta);
 		return Objects.requireNonNull(savedMeta, "saved meta must not be null");
+	}
+
+	private static LocalDateTime startOfDay(LocalDate date) {
+		return date == null ? null : date.atStartOfDay();
+	}
+
+	private static LocalDateTime endOfDay(LocalDate date) {
+		return date == null ? null : date.atTime(23, 59, 59);
+	}
+
+	private static String normalizeAccessLevel(String accessLevel) {
+		return (accessLevel == null || accessLevel.isBlank()) ? null : accessLevel.trim().toUpperCase(Locale.ROOT);
+	}
+
+	private static String normalizeMimeType(String mimeType) {
+		if (mimeType == null || mimeType.isBlank()) return null;
+		String mt = mimeType.trim().toLowerCase(Locale.ROOT);
+		return mt.contains("/") ? mt : mt + "/%";
+	}
+
+	private static String normalizeSearch(String search) {
+		return (search == null || search.isBlank()) ? null : "%" + search.trim() + "%";
+	}
+
+	private static boolean isWithinCreatedAt(StoredFileMeta meta, LocalDateTime from, LocalDateTime to) {
+		LocalDateTime ts = meta.getCreatedAt();
+		if (ts == null) return false;
+		return (from == null || !ts.isBefore(from)) && (to == null || !ts.isAfter(to));
 	}
 
 	private void generateVariants(StoredFileMeta meta, String mime) throws IOException {
@@ -289,7 +299,7 @@ public class FileService implements IFileService {
 	}
 
 	private static String sanitizeOriginalName(String name) {
-		if (name == null) return "unknown";
+		if (name == null) return DefaultValues.UNKNOWN;
 		String onlyName = name.replace("\\", "/");
 		int idx = onlyName.lastIndexOf('/');
 		if (idx >= 0) onlyName = onlyName.substring(idx + 1);

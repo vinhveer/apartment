@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import com.qvinh.apartment.shared.constants.SecurityTokens;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -27,8 +28,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 	protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
 		throws ServletException, IOException {
 		String auth = request.getHeader(HttpHeaders.AUTHORIZATION);
-		if (auth != null && auth.startsWith("Bearer ")) {
-			String token = auth.substring(7);
+		if (auth != null && auth.startsWith(SecurityTokens.BEARER_PREFIX)) {
+			String token = auth.substring(SecurityTokens.BEARER_PREFIX.length());
 			try {
 				String username = jwtService.extractUsername(token);
 				var authorities = jwtService.extractAuthorities(token).stream()
@@ -42,4 +43,3 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 		filterChain.doFilter(request, response);
 	}
 }
-

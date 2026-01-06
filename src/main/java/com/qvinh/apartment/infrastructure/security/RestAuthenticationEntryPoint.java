@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.qvinh.apartment.infrastructure.web.RequestIdFilter;
 import com.qvinh.apartment.shared.api.error.ApiError;
 import com.qvinh.apartment.shared.api.error.ApiErrorResponse;
+import com.qvinh.apartment.shared.constants.ErrorMessages;
 import com.qvinh.apartment.shared.error.ErrorCode;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -31,8 +32,7 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
 		response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 		response.setHeader(RequestIdFilter.REQUEST_ID_HEADER, requestId);
 
-		ApiError error = new ApiError(ErrorCode.UNAUTHORIZED.name(), "Authentication required", requestId, null, null);
+		ApiError error = new ApiError(ErrorCode.UNAUTHORIZED.name(), ErrorMessages.AUTHENTICATION_REQUIRED, requestId, null, null);
 		objectMapper.writeValue(response.getOutputStream(), ApiErrorResponse.of(error));
 	}
 }
-

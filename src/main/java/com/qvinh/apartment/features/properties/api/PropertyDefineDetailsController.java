@@ -13,8 +13,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/property-define-details")
+@RequestMapping(PropertyDefineDetailsController.BASE_PATH)
 public class PropertyDefineDetailsController {
+
+	public static final String BASE_PATH = "/api/property-define-details";
+	public static final String BASE_PATH_ALL = BASE_PATH + "/**";
 
 	private final IPropertyDefineDetailsService service;
 

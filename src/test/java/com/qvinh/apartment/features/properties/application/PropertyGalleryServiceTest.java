@@ -279,16 +279,14 @@ class PropertyGalleryServiceTest extends PostgresTestContainer {
 		Long propertyId = Objects.requireNonNull(property.getPropertyId());
 
 		service.addFileIntoGallery(propertyId, Objects.requireNonNull(file1.getFileId()));
-		service.addFileIntoGallery(propertyId, Objects.requireNonNull(file2.getFileId()));
+			service.addFileIntoGallery(propertyId, Objects.requireNonNull(file2.getFileId()));
 
-		List<PropertyGalleryRes> res = service.getFileByPropertiesId(propertyId);
+			List<PropertyGalleryRes> res = service.getFileByPropertiesId(propertyId);
 
-		assertThat(res).hasSize(2);
-		// Verify all items have correct propertyId
-		assertThat(res).allMatch(r -> r.getPropertyId().equals(propertyId));
-		// Verify file paths are mapped correctly
-		assertThat(res)
-			.extracting(PropertyGalleryRes::getFilePath)
-			.containsExactlyInAnyOrder(file1.getRelativePath(), file2.getRelativePath());
+			assertThat(res)
+				.hasSize(2)
+				.allMatch(r -> r.getPropertyId().equals(propertyId))
+				.extracting(PropertyGalleryRes::getFilePath)
+				.containsExactlyInAnyOrder(file1.getRelativePath(), file2.getRelativePath());
+		}
 	}
-}

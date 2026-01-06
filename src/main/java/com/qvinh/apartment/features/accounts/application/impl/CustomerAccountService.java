@@ -4,6 +4,8 @@ import com.qvinh.apartment.features.accounts.application.ICustomerAccountService
 import com.qvinh.apartment.features.accounts.domain.User;
 import com.qvinh.apartment.features.accounts.dto.user.UserRes;
 import com.qvinh.apartment.features.accounts.dto.user.UserUpdateReq;
+import com.qvinh.apartment.features.accounts.constants.AccountsMessages;
+import com.qvinh.apartment.shared.constants.RoleNames;
 import com.qvinh.apartment.shared.error.ErrorCode;
 import com.qvinh.apartment.shared.exception.ResourceNotFoundException;
 import com.qvinh.apartment.features.accounts.mapper.UserMapper;
@@ -31,14 +33,14 @@ public class CustomerAccountService implements ICustomerAccountService {
 	public Page<UserRes> searchCustomerAccounts(String q, Pageable pageable) {
 		Objects.requireNonNull(pageable, "pageable must not be null");
 		String pattern = (q == null || q.isBlank()) ? null : "%" + q.trim() + "%";
-		return userRepository.searchByRole("USER", pattern, pageable).map(userMapper::toRes);
+		return userRepository.searchByRole(RoleNames.USER, pattern, pageable).map(userMapper::toRes);
 	}
 
 	@Override
 	@Transactional
 	public UserRes editCustomerAccount(long id, UserUpdateReq req) {
 		User u = userRepository.findById(id)
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND, "User not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND, AccountsMessages.USER_NOT_FOUND));
 		userMapper.updateEntityFromReq(req, u);
 		User updated = userRepository.save(Objects.requireNonNull(u, "user must not be null"));
 		return userMapper.toRes(updated);
@@ -48,7 +50,7 @@ public class CustomerAccountService implements ICustomerAccountService {
 	@Transactional
 	public void deleteCustomerAccount(long id) {
 		User u = userRepository.findById(id)
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND, "User not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND, AccountsMessages.USER_NOT_FOUND));
 		userRepository.delete(Objects.requireNonNull(u, "user must not be null"));
 	}
 }

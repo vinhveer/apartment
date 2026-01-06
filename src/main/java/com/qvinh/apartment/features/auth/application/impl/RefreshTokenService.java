@@ -5,6 +5,7 @@ import com.qvinh.apartment.features.accounts.domain.User;
 import com.qvinh.apartment.features.accounts.persistence.UserRepository;
 import com.qvinh.apartment.features.auth.domain.RefreshToken;
 import com.qvinh.apartment.features.auth.persistence.RefreshTokenRepository;
+import com.qvinh.apartment.shared.constants.ErrorMessages;
 import com.qvinh.apartment.shared.error.ErrorCode;
 import com.qvinh.apartment.shared.exception.AppException;
 import org.springframework.context.annotation.Lazy;
@@ -32,7 +33,7 @@ public class RefreshTokenService implements IRefreshTokenService {
 	public RefreshToken storeOrRotate(String username, String token, LocalDateTime expiresAt) {
 		User user = userRepo.findByUsername(Objects.requireNonNull(username))
 			.orElseGet(() -> userRepo.findByEmail(Objects.requireNonNull(username))
-				.orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED, HttpStatus.UNAUTHORIZED, "Authentication required")));
+				.orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED, HttpStatus.UNAUTHORIZED, ErrorMessages.AUTHENTICATION_REQUIRED)));
 		// enforce single active refresh token per user by revoking existing ones
 		refreshRepo.revokeByUserId(Objects.requireNonNull(user.getId(), "user.id must not be null"));
 		RefreshToken rt = new RefreshToken();
@@ -55,7 +56,7 @@ public class RefreshTokenService implements IRefreshTokenService {
 	public RefreshToken rotate(String oldToken, String newToken, LocalDateTime newExp, String username) {
 		User user = userRepo.findByUsername(Objects.requireNonNull(username))
 			.orElseGet(() -> userRepo.findByEmail(Objects.requireNonNull(username))
-				.orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED, HttpStatus.UNAUTHORIZED, "Authentication required")));
+				.orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED, HttpStatus.UNAUTHORIZED, ErrorMessages.AUTHENTICATION_REQUIRED)));
 		RefreshToken existing = refreshRepo.findByToken(Objects.requireNonNull(oldToken))
 			.orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED, HttpStatus.UNAUTHORIZED, "Invalid refresh token"));
 		// ownership and validity checks

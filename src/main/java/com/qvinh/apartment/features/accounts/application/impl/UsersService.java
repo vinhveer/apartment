@@ -3,8 +3,10 @@ package com.qvinh.apartment.features.accounts.application.impl;
 import com.qvinh.apartment.features.accounts.application.IUsersService;
 import com.qvinh.apartment.features.accounts.domain.PropertySaleInfo;
 import com.qvinh.apartment.features.accounts.domain.User;
+import com.qvinh.apartment.features.accounts.constants.AccountsMessages;
 import com.qvinh.apartment.features.accounts.dto.user.SelfProfileUpdateReq;
 import com.qvinh.apartment.features.accounts.dto.user.UserRes;
+import com.qvinh.apartment.shared.constants.RoleNames;
 import com.qvinh.apartment.shared.error.ErrorCode;
 import com.qvinh.apartment.shared.exception.AppException;
 import com.qvinh.apartment.shared.exception.ResourceNotFoundException;
@@ -44,7 +46,7 @@ public class UsersService implements IUsersService {
 	@Transactional
 	public UserRes getMe(String username) {
 		User user = userRepository.findByUsername(Objects.requireNonNull(username))
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND, "User not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND, AccountsMessages.USER_NOT_FOUND));
 		return userMapper.toRes(user);
 	}
 
@@ -52,7 +54,7 @@ public class UsersService implements IUsersService {
 	public UserRes updateAvatar(String username, MultipartFile file) {
 		Objects.requireNonNull(file, "file must not be null");
 		User user = userRepository.findByUsername(Objects.requireNonNull(username))
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND, "User not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND, AccountsMessages.USER_NOT_FOUND));
 
 		// Validate file size (max 5MB)
 		if (file.getSize() > 5 * 1024 * 1024) {
@@ -64,11 +66,11 @@ public class UsersService implements IUsersService {
 			throw new AppException(ErrorCode.VALIDATION_ERROR, HttpStatus.UNPROCESSABLE_ENTITY, "Unsupported image type");
 		}
 
-		try {
-			BufferedImage original = ImageIO.read(file.getInputStream());
-			if (original == null) {
-				throw new AppException(ErrorCode.VALIDATION_ERROR, HttpStatus.UNPROCESSABLE_ENTITY, "Invalid image file");
-			}
+			try {
+				BufferedImage original = ImageIO.read(file.getInputStream());
+				if (original == null) {
+					throw new AppException(ErrorCode.VALIDATION_ERROR, HttpStatus.UNPROCESSABLE_ENTITY, "Invalid image file");
+				}
 
 			BufferedImage resized = Thumbnails.of(original)
 				.size(AVATAR_MAX_SIZE, AVATAR_MAX_SIZE)
@@ -85,20 +87,20 @@ public class UsersService implements IUsersService {
 			String base64 = Base64.getEncoder().encodeToString(baos.toByteArray());
 			String dataUri = "data:image/jpeg;base64," + base64;
 
-			user.setAvatar(dataUri);
-			User saved = userRepository.save(user);
-			return userMapper.toRes(saved);
-		} catch (IOException e) {
-			throw new AppException(ErrorCode.INTERNAL_ERROR, HttpStatus.INTERNAL_SERVER_ERROR, "Failed to process image");
-		} catch (Exception e) {
-			throw new AppException(ErrorCode.INTERNAL_ERROR, HttpStatus.INTERNAL_SERVER_ERROR, "Failed to process image");
+				user.setAvatar(dataUri);
+				User saved = userRepository.save(user);
+				return userMapper.toRes(saved);
+			} catch (AppException e) {
+				throw e;
+			} catch (IOException | RuntimeException e) {
+				throw new AppException(ErrorCode.INTERNAL_ERROR, HttpStatus.INTERNAL_SERVER_ERROR, "Failed to process image");
+			}
 		}
-	}
 
 	@Transactional
 	public UserRes deleteAvatar(String username) {
 		User user = userRepository.findByUsername(Objects.requireNonNull(username))
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND, "User not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND, AccountsMessages.USER_NOT_FOUND));
 		user.setAvatar(null);
 		User saved = userRepository.save(user);
 		return userMapper.toRes(saved);
@@ -107,12 +109,11 @@ public class UsersService implements IUsersService {
 	@Transactional
 	public UserRes updateSelfProfile(String username, SelfProfileUpdateReq req) {
 		User user = userRepository.findByUsername(Objects.requireNonNull(username))
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND, "User not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND, AccountsMessages.USER_NOT_FOUND));
 		userMapper.updateEntityFromSelf(req, user);
 		User updated = userRepository.save(Objects.requireNonNull(user, "user must not be null"));
 		String roleName = Objects.requireNonNull(updated.getRole()).getRoleName();
-		if (("ADMIN".equals(roleName) || "SALE".equals(roleName)) &&
-			(req.getFullName() != null || req.getPhone() != null)) {
+		if (RoleNames.isEmployeeRole(roleName) && (req.getFullName() != null || req.getPhone() != null)) {
 			Long userId = Objects.requireNonNull(updated.getId(), "user id must not be null");
 			saleInfoRepository.findByUserId(userId).ifPresent(existing -> {
 				PropertySaleInfo info = Objects.requireNonNull(existing, "existing sale info must not be null");

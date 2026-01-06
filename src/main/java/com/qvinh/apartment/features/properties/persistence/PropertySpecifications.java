@@ -12,6 +12,13 @@ import java.util.List;
 
 public final class PropertySpecifications {
 
+	private static final String FIELD_DETAIL = "detail";
+	private static final String FIELD_ID = "id";
+	private static final String FIELD_DETAIL_ID = "detailId";
+	private static final String FIELD_PROPERTY_ID = "propertyId";
+	private static final String FIELD_IS_NUMBER = "isNumber";
+	private static final String FIELD_VALUE = "value";
+
 	private PropertySpecifications() {
 	}
 
@@ -21,67 +28,81 @@ public final class PropertySpecifications {
 		}
 
 		Specification<Property> spec = (root, query, cb) -> cb.conjunction();
+		spec = applyTextFilters(req, spec);
+		spec = applyListFilters(req, spec);
+		spec = applyFlagFilters(req, spec);
+		spec = applyPriceFilters(req, spec);
+		spec = applyDateFilters(req, spec);
+		spec = applyDetailFilters(req, spec);
+		return spec;
+	}
 
+	private static Specification<Property> applyTextFilters(PropertySearchReq req, Specification<Property> spec) {
 		if (req.getQ() != null && !req.getQ().trim().isEmpty()) {
 			spec = spec.and(byKeyword(req.getQ().trim()));
 		}
-
 		if (req.getTitle() != null && !req.getTitle().trim().isEmpty()) {
 			spec = spec.and(byTitle(req.getTitle().trim()));
 		}
-
 		if (req.getDescription() != null && !req.getDescription().trim().isEmpty()) {
 			spec = spec.and(byDescription(req.getDescription().trim()));
 		}
+		return spec;
+	}
 
+	private static Specification<Property> applyListFilters(PropertySearchReq req, Specification<Property> spec) {
 		if (req.getTypeIds() != null && !req.getTypeIds().isEmpty()) {
 			spec = spec.and(byTypeIds(req.getTypeIds()));
 		}
-
 		if (req.getAreaIds() != null && !req.getAreaIds().isEmpty()) {
 			spec = spec.and(byAreaIds(req.getAreaIds()));
 		}
-
 		if (req.getSaleUserIds() != null && !req.getSaleUserIds().isEmpty()) {
 			spec = spec.and(bySaleUserIds(req.getSaleUserIds()));
 		}
+		return spec;
+	}
 
+	private static Specification<Property> applyFlagFilters(PropertySearchReq req, Specification<Property> spec) {
 		if (req.getIsPublic() != null) {
 			spec = spec.and(byIsPublic(req.getIsPublic()));
 		}
-
 		if (req.getIsForRent() != null) {
 			spec = spec.and(byIsForRent(req.getIsForRent()));
 		}
+		return spec;
+	}
 
+	private static Specification<Property> applyPriceFilters(PropertySearchReq req, Specification<Property> spec) {
 		if (req.getMinPrice() != null) {
 			spec = spec.and(byMinPrice(req.getMinPrice()));
 		}
-
 		if (req.getMaxPrice() != null) {
 			spec = spec.and(byMaxPrice(req.getMaxPrice()));
 		}
+		return spec;
+	}
 
+	private static Specification<Property> applyDateFilters(PropertySearchReq req, Specification<Property> spec) {
 		if (req.getCreatedFrom() != null) {
 			spec = spec.and(byCreatedFrom(req.getCreatedFrom()));
 		}
-
 		if (req.getCreatedTo() != null) {
 			spec = spec.and(byCreatedTo(req.getCreatedTo()));
 		}
-
 		if (req.getUpdatedFrom() != null) {
 			spec = spec.and(byUpdatedFrom(req.getUpdatedFrom()));
 		}
-
 		if (req.getUpdatedTo() != null) {
 			spec = spec.and(byUpdatedTo(req.getUpdatedTo()));
 		}
+		return spec;
+	}
 
+	private static Specification<Property> applyDetailFilters(PropertySearchReq req, Specification<Property> spec) {
 		if (req.getDetails() != null && !req.getDetails().isEmpty()) {
 			spec = spec.and(byDetails(req.getDetails()));
 		}
-
 		return spec;
 	}
 
@@ -170,49 +191,58 @@ public final class PropertySpecifications {
 			if (query == null) {
 				return cb.disjunction();
 			}
-			Predicate[] existsPredicates = new Predicate[details.size()];
-			for (int i = 0; i < details.size(); i++) {
-				PropertyDetailFilterReq detailFilter = details.get(i);
-				Subquery<Long> existsSubquery = query.subquery(Long.class);
-				Root<com.qvinh.apartment.features.properties.domain.PropertyDetails> detailRoot = existsSubquery.from(com.qvinh.apartment.features.properties.domain.PropertyDetails.class);
-				Join<Object, Object> defineDetailJoin = detailRoot.join("detail", JoinType.INNER);
-
-				Predicate detailIdPred = cb.equal(detailRoot.get("id").get("detailId"), detailFilter.getDetailId());
-				Predicate propertyIdPred = cb.equal(detailRoot.get("id").get("propertyId"), root.get("propertyId"));
-
-				Predicate valuePred = cb.conjunction();
-				if (detailFilter.getNumber() != null) {
-					Predicate isNumberPred = cb.equal(defineDetailJoin.get("isNumber"), true);
-					Predicate numberEqualsPred = cb.equal(detailRoot.get("value"), detailFilter.getNumber().toString());
-					valuePred = cb.and(isNumberPred, numberEqualsPred);
-				} else if (detailFilter.getMinNumber() != null || detailFilter.getMaxNumber() != null) {
-					Predicate isNumberPred = cb.equal(defineDetailJoin.get("isNumber"), true);
-					if (detailFilter.getMinNumber() != null) {
-						valuePred = cb.and(valuePred, cb.greaterThanOrEqualTo(
-							detailRoot.get("value"),
-							detailFilter.getMinNumber().toString()
-						));
-					}
-					if (detailFilter.getMaxNumber() != null) {
-						valuePred = cb.and(valuePred, cb.lessThanOrEqualTo(
-							detailRoot.get("value"),
-							detailFilter.getMaxNumber().toString()
-						));
-					}
-					valuePred = cb.and(isNumberPred, valuePred);
-				} else if (detailFilter.getText() != null && !detailFilter.getText().trim().isEmpty()) {
-					Predicate isTextPred = cb.equal(defineDetailJoin.get("isNumber"), false);
-					Predicate textLikePred = cb.like(cb.lower(detailRoot.get("value")), "%" + detailFilter.getText().toLowerCase().trim() + "%");
-					valuePred = cb.and(isTextPred, textLikePred);
-				}
-
-				existsSubquery.select(cb.literal(1L))
-					.where(cb.and(detailIdPred, propertyIdPred, valuePred));
-
-				existsPredicates[i] = cb.exists(existsSubquery);
-			}
-
-			return cb.and(existsPredicates);
+			List<Predicate> existsPredicates = details.stream()
+				.map(detailFilter -> buildDetailExistsPredicate(detailFilter, root, query, cb))
+				.toList();
+			return cb.and(existsPredicates.toArray(Predicate[]::new));
 		};
+	}
+
+	private static Predicate buildDetailExistsPredicate(PropertyDetailFilterReq detailFilter, Root<Property> propertyRoot,
+	                                                   CriteriaQuery<?> query, CriteriaBuilder cb) {
+		Subquery<Long> existsSubquery = query.subquery(Long.class);
+		Root<com.qvinh.apartment.features.properties.domain.PropertyDetails> detailRoot =
+			existsSubquery.from(com.qvinh.apartment.features.properties.domain.PropertyDetails.class);
+		Join<Object, Object> defineDetailJoin = detailRoot.join(FIELD_DETAIL, JoinType.INNER);
+
+		Predicate detailIdPred = cb.equal(detailRoot.get(FIELD_ID).get(FIELD_DETAIL_ID), detailFilter.getDetailId());
+		Predicate propertyIdPred = cb.equal(detailRoot.get(FIELD_ID).get(FIELD_PROPERTY_ID), propertyRoot.get(FIELD_PROPERTY_ID));
+		Predicate valuePred = buildDetailValuePredicate(detailFilter, cb, detailRoot, defineDetailJoin);
+
+		existsSubquery.select(cb.literal(1L))
+			.where(cb.and(detailIdPred, propertyIdPred, valuePred));
+
+		return cb.exists(existsSubquery);
+	}
+
+	private static Predicate buildDetailValuePredicate(PropertyDetailFilterReq detailFilter, CriteriaBuilder cb,
+	                                                  Root<com.qvinh.apartment.features.properties.domain.PropertyDetails> detailRoot,
+	                                                  Join<Object, Object> defineDetailJoin) {
+		if (detailFilter.getNumber() != null) {
+			Predicate isNumberPred = cb.equal(defineDetailJoin.get(FIELD_IS_NUMBER), true);
+			Predicate numberEqualsPred = cb.equal(detailRoot.get(FIELD_VALUE), detailFilter.getNumber().toString());
+			return cb.and(isNumberPred, numberEqualsPred);
+		}
+
+		if (detailFilter.getMinNumber() != null || detailFilter.getMaxNumber() != null) {
+			Predicate valuePred = cb.conjunction();
+			if (detailFilter.getMinNumber() != null) {
+				valuePred = cb.and(valuePred, cb.greaterThanOrEqualTo(detailRoot.get(FIELD_VALUE), detailFilter.getMinNumber().toString()));
+			}
+			if (detailFilter.getMaxNumber() != null) {
+				valuePred = cb.and(valuePred, cb.lessThanOrEqualTo(detailRoot.get(FIELD_VALUE), detailFilter.getMaxNumber().toString()));
+			}
+			Predicate isNumberPred = cb.equal(defineDetailJoin.get(FIELD_IS_NUMBER), true);
+			return cb.and(isNumberPred, valuePred);
+		}
+
+		if (detailFilter.getText() != null && !detailFilter.getText().trim().isEmpty()) {
+			Predicate isTextPred = cb.equal(defineDetailJoin.get(FIELD_IS_NUMBER), false);
+			String pattern = "%" + detailFilter.getText().toLowerCase().trim() + "%";
+			Predicate textLikePred = cb.like(cb.lower(detailRoot.get(FIELD_VALUE)), pattern);
+			return cb.and(isTextPred, textLikePred);
+		}
+
+		return cb.conjunction();
 	}
 }

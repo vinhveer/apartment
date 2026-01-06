@@ -7,7 +7,7 @@ import org.springframework.http.HttpStatus;
 public class AppException extends RuntimeException {
 	private final ErrorCode code;
 	private final HttpStatus status;
-	private final Map<String, Object> details;
+	private final transient Map<String, Object> details;
 
 	public AppException(ErrorCode code, HttpStatus status, String message) {
 		this(code, status, message, null);
@@ -24,4 +24,3 @@ public class AppException extends RuntimeException {
 	public HttpStatus getStatus() { return status; }
 	public Map<String, Object> getDetails() { return details; }
 }
-

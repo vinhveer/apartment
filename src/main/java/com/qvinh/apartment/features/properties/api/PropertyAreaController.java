@@ -13,8 +13,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/areas")
+@RequestMapping(PropertyAreaController.BASE_PATH)
 public class PropertyAreaController {
+
+	public static final String BASE_PATH = "/api/areas";
+	public static final String BASE_PATH_ALL = BASE_PATH + "/**";
 
 	private final IPropertyAreaService service;
 

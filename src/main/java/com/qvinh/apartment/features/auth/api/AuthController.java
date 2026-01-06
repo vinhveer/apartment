@@ -30,8 +30,13 @@ import java.util.Locale;
 import java.util.Objects;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping(AuthController.BASE_PATH)
 public class AuthController {
+
+	public static final String BASE_PATH = "/api/auth";
+	public static final String LOGIN_PATH = BASE_PATH + "/login";
+	public static final String REFRESH_PATH = BASE_PATH + "/refresh";
+	public static final String LOGOUT_PATH = BASE_PATH + "/logout";
 
 	private final AuthenticationManager authenticationManager;
 	private final JwtService jwtService;
@@ -110,7 +115,7 @@ public class AuthController {
 			.httpOnly(true)
 			.secure(true)
 			.sameSite("Strict")
-			.path("/api/auth")
+			.path(BASE_PATH)
 			.maxAge(Objects.requireNonNull(Duration.ofMillis(REFRESH_TTL_MS)))
 			.build();
 		response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
@@ -121,7 +126,7 @@ public class AuthController {
 			.httpOnly(true)
 			.secure(true)
 			.sameSite("Strict")
-			.path("/api/auth")
+			.path(BASE_PATH)
 			.maxAge(0)
 			.build();
 		response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());

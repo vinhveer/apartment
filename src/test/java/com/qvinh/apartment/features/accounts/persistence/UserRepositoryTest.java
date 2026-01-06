@@ -74,11 +74,14 @@ class UserRepositoryTest extends PostgresTestContainer {
 		admin.setEmail("adminX@example.com");
 		admin.setPassword("x");
 		admin.setRole(adminRole);
-		userRepository.saveAndFlush(admin);
+			userRepository.saveAndFlush(admin);
 
-		Pageable pageable = PageRequest.of(0, 10);
-		Page<User> pageAll = userRepository.searchByRole("USER", null, pageable);
-		assertThat(pageAll.getContent()).extracting(User::getRole).allMatch(r -> "USER".equals(r.getRoleName()));
+			Pageable pageable = PageRequest.of(0, 10);
+			Page<User> pageAll = userRepository.searchByRole("USER", null, pageable);
+			assertThat(pageAll.getContent())
+				.isNotEmpty()
+				.extracting(User::getRole)
+				.allMatch(r -> "USER".equals(r.getRoleName()));
 
 		Page<User> pageFiltered = userRepository.searchByRole("USER", "%custA%", pageable);
 		assertThat(pageFiltered.getContent()).extracting(User::getUsername).contains("custA");
@@ -119,10 +122,12 @@ class UserRepositoryTest extends PostgresTestContainer {
 		user.setRole(userRole);
 		userRepository.saveAndFlush(user);
 
-		Pageable pageable = PageRequest.of(0, 10);
-		Page<User> pageAll = userRepository.searchByRoles(java.util.List.of("ADMIN", "SALE"), null, pageable);
-		assertThat(pageAll.getContent()).extracting(u -> u.getRole().getRoleName())
-			.allMatch(rn -> rn.equals("ADMIN") || rn.equals("SALE"));
+			Pageable pageable = PageRequest.of(0, 10);
+			Page<User> pageAll = userRepository.searchByRoles(java.util.List.of("ADMIN", "SALE"), null, pageable);
+			assertThat(pageAll.getContent())
+				.isNotEmpty()
+				.extracting(u -> u.getRole().getRoleName())
+				.allMatch(rn -> rn.equals("ADMIN") || rn.equals("SALE"));
 
 		Page<User> pageFiltered = userRepository.searchByRoles(java.util.List.of("ADMIN", "SALE"), "%adminY%", pageable);
 		assertThat(pageFiltered.getContent()).extracting(User::getUsername).contains("adminY");
@@ -147,4 +152,3 @@ class UserRepositoryTest extends PostgresTestContainer {
 		assertThat(found.getAvatar()).isEqualTo("data:image/jpeg;base64,xxx");
 	}
 }
-

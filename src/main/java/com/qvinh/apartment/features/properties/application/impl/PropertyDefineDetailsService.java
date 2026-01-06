@@ -5,6 +5,7 @@ import com.qvinh.apartment.features.properties.domain.PropertyDefineDetails;
 import com.qvinh.apartment.features.properties.dto.property_define_details.PropertyDefineDetailsCreateReq;
 import com.qvinh.apartment.features.properties.dto.property_define_details.PropertyDefineDetailsRes;
 import com.qvinh.apartment.features.properties.dto.property_define_details.PropertyDefineDetailsUpdateReq;
+import com.qvinh.apartment.features.properties.constants.PropertiesMessages;
 import com.qvinh.apartment.shared.error.ErrorCode;
 import com.qvinh.apartment.shared.exception.ResourceNotFoundException;
 import com.qvinh.apartment.features.properties.mapper.PropertyDefineDetailsMapper;
@@ -22,6 +23,7 @@ public class PropertyDefineDetailsService implements IPropertyDefineDetailsServi
 	private final PropertyDefineDetailsRepository repository;
 	private final PropertyDefineDetailsMapper mapper;
 	private static final String ENTITY_NOT_NULL = "entity must not be null";
+	private static final String UPDATED_NOT_NULL = "updated must not be null";
 
 	public PropertyDefineDetailsService(PropertyDefineDetailsRepository repository, PropertyDefineDetailsMapper mapper) {
 		this.repository = repository;
@@ -32,14 +34,14 @@ public class PropertyDefineDetailsService implements IPropertyDefineDetailsServi
 	public PropertyDefineDetailsRes create(PropertyDefineDetailsCreateReq req) {
 		PropertyDefineDetails entity = mapper.toEntity(req);
 		PropertyDefineDetails updated = repository.save(Objects.requireNonNull(entity, ENTITY_NOT_NULL));
-		PropertyDefineDetails saved = Objects.requireNonNull(updated, "updated must not be null");
+		PropertyDefineDetails saved = Objects.requireNonNull(updated, UPDATED_NOT_NULL);
 		return mapper.toRes(saved);
 	}
 
 	@Transactional(readOnly = true)
 	public PropertyDefineDetailsRes get(int id) {
 		PropertyDefineDetails entity = repository.findById(id)
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_DEFINE_DETAIL_NOT_FOUND, "Property define detail not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_DEFINE_DETAIL_NOT_FOUND, PropertiesMessages.PROPERTY_DEFINE_DETAIL_NOT_FOUND));
 		return mapper.toRes(entity);
 	}
 
@@ -52,7 +54,7 @@ public class PropertyDefineDetailsService implements IPropertyDefineDetailsServi
 	@Transactional
 	public PropertyDefineDetailsRes update(int id, PropertyDefineDetailsUpdateReq req) {
 		PropertyDefineDetails entity = repository.findById(id)
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_DEFINE_DETAIL_NOT_FOUND, "Property define detail not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_DEFINE_DETAIL_NOT_FOUND, PropertiesMessages.PROPERTY_DEFINE_DETAIL_NOT_FOUND));
 		mapper.updateEntityFromReq(req, entity);
 		PropertyDefineDetails updated = repository.save(Objects.requireNonNull(entity, ENTITY_NOT_NULL));
 		return mapper.toRes(updated);
@@ -61,7 +63,7 @@ public class PropertyDefineDetailsService implements IPropertyDefineDetailsServi
 	@Transactional
 	public void delete(int id) {
 		PropertyDefineDetails entity = repository.findById(id)
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_DEFINE_DETAIL_NOT_FOUND, "Property define detail not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_DEFINE_DETAIL_NOT_FOUND, PropertiesMessages.PROPERTY_DEFINE_DETAIL_NOT_FOUND));
 		repository.delete(Objects.requireNonNull(entity, ENTITY_NOT_NULL));
 	}
 }

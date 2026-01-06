@@ -1,6 +1,7 @@
 package com.qvinh.apartment.features.files.api;
 
 import com.qvinh.apartment.shared.api.ApiResponse;
+import com.qvinh.apartment.features.files.constants.FilesMessages;
 import com.qvinh.apartment.features.files.dto.FileMetaUpdateReq;
 import com.qvinh.apartment.features.files.dto.FileRenameReq;
 import com.qvinh.apartment.features.files.domain.StoredFileMeta;
@@ -36,8 +37,11 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/files")
+@RequestMapping(FilesController.BASE_PATH)
 public class FilesController {
+
+	public static final String BASE_PATH = "/api/files";
+	public static final String BASE_PATH_ALL = BASE_PATH + "/**";
 
 	private final IFileService fileService;
 	private final StoredFileMetaRepository fileRepo;
@@ -65,7 +69,7 @@ public class FilesController {
 	@GetMapping("/{id}")
 	public ResponseEntity<ApiResponse<Map<String, Object>>> getMeta(@PathVariable Long id) {
 		StoredFileMeta meta = fileRepo.findById(Objects.requireNonNull(id))
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.FILE_NOT_FOUND, "File not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.FILE_NOT_FOUND, FilesMessages.FILE_NOT_FOUND));
 		Map<String, Object> data = buildMeta(meta);
 		return ResponseEntity.ok(ApiResponse.ok("Get file successfully", data));
 	}
@@ -73,12 +77,12 @@ public class FilesController {
 	@GetMapping("/{id}/variant/{key}")
 	public ResponseEntity<InputStreamResource> getPrivateVariant(@PathVariable Long id, @PathVariable String key) throws IOException {
 		StoredFileMeta meta = fileRepo.findById(Objects.requireNonNull(id))
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.FILE_NOT_FOUND, "File not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.FILE_NOT_FOUND, FilesMessages.FILE_NOT_FOUND));
 		StoredFileVariant variant = variantRepo.findByFile_FileIdAndVariantKey(
 				Objects.requireNonNull(id),
 				Objects.requireNonNull(key)
 			)
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.FILE_VARIANT_NOT_FOUND, "File variant not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.FILE_VARIANT_NOT_FOUND, FilesMessages.FILE_VARIANT_NOT_FOUND));
 		var is = storage.load(variant.getRelativePath());
 		return ResponseEntity.ok()
 			.header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + variant.getVariantKey() + "-" + meta.getStoredName() + "\"")

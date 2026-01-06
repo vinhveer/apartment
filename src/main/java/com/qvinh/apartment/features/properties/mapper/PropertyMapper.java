@@ -10,7 +10,6 @@ import org.mapstruct.*;
 
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Mapper(
 	componentModel = "spring",
@@ -87,7 +86,7 @@ public interface PropertyMapper {
 
 	default List<PropertyGalleryRes> toGalleryResList(Set<PropertyGallery> galleries) {
 		if (galleries == null) return List.of();
-		return galleries.stream().map(this::toGalleryRes).collect(Collectors.toList());
+		return galleries.stream().map(this::toGalleryRes).toList();
 	}
 
 	default PropertyGalleryRes toGalleryRes(PropertyGallery gallery) {
@@ -105,7 +104,7 @@ public interface PropertyMapper {
 
 	default List<PropertyDetailRes> toDetailResList(Set<PropertyDetails> details) {
 		if (details == null) return List.of();
-		return details.stream().map(this::toDetailRes).collect(Collectors.toList());
+		return details.stream().map(this::toDetailRes).toList();
 	}
 
 	default PropertyDetailRes toDetailRes(PropertyDetails detail) {
@@ -121,4 +120,3 @@ public interface PropertyMapper {
 		return res;
 	}
 }
-

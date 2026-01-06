@@ -151,14 +151,16 @@ class AccountServiceTest extends PostgresTestContainer {
 		admin.setFullName("Admin Search 2 Full");
 		admin.setPhone("0901");
 		admin.setRoleName("ADMIN");
-		service.createEmployeeAccount(admin);
+			service.createEmployeeAccount(admin);
 
-		var pageAll = service.searchEmployeeAccounts(null, org.springframework.data.domain.PageRequest.of(0, 10));
-		assertThat(pageAll.getContent()).allMatch(u -> u.getRoleName().equals("ADMIN") || u.getRoleName().equals("SALE"));
+			var pageAll = service.searchEmployeeAccounts(null, org.springframework.data.domain.PageRequest.of(0, 10));
+			assertThat(pageAll.getContent())
+				.isNotEmpty()
+				.allMatch(u -> u.getRoleName().equals("ADMIN") || u.getRoleName().equals("SALE"));
 
-		var pageFiltered = service.searchEmployeeAccounts("saleSearch", org.springframework.data.domain.PageRequest.of(0, 10));
-		assertThat(pageFiltered.getContent()).extracting(com.qvinh.apartment.features.accounts.dto.user.UserRes::getUsername).contains("saleSearch");
-	}
+			var pageFiltered = service.searchEmployeeAccounts("saleSearch", org.springframework.data.domain.PageRequest.of(0, 10));
+			assertThat(pageFiltered.getContent()).extracting(com.qvinh.apartment.features.accounts.dto.user.UserRes::getUsername).contains("saleSearch");
+		}
 
 	@Test
 	@Transactional

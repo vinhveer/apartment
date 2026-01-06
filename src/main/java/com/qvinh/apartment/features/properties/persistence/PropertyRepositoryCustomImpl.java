@@ -18,6 +18,17 @@ import java.util.List;
 
 public class PropertyRepositoryCustomImpl implements PropertyRepositoryCustom {
 
+	private static final String ATTR_TYPE = "type";
+	private static final String ATTR_AREA = "area";
+	private static final String ATTR_SALE_INFO = "saleInfo";
+	private static final String ATTR_GALLERIES = "galleries";
+	private static final String ATTR_DETAILS = "details";
+	private static final String ATTR_USER = "user";
+	private static final String ATTR_FILE = "file";
+	private static final String ATTR_DETAIL = "detail";
+	private static final String ATTR_PROPERTY_ID = "propertyId";
+	private static final String FETCHGRAPH_HINT = "jakarta.persistence.fetchgraph";
+
 	@PersistenceContext
 	private EntityManager entityManager;
 
@@ -61,11 +72,11 @@ public class PropertyRepositoryCustomImpl implements PropertyRepositoryCustom {
 
 		// Create and apply EntityGraph
 		EntityGraph<Property> graph = entityManager.createEntityGraph(Property.class);
-		graph.addAttributeNodes("type", "area", "saleInfo", "galleries", "details");
-		graph.addSubgraph("saleInfo").addAttributeNodes("user");
-		graph.addSubgraph("galleries").addAttributeNodes("file");
-		graph.addSubgraph("details").addAttributeNodes("detail");
-		typedQuery.setHint("jakarta.persistence.fetchgraph", graph);
+		graph.addAttributeNodes(ATTR_TYPE, ATTR_AREA, ATTR_SALE_INFO, ATTR_GALLERIES, ATTR_DETAILS);
+		graph.addSubgraph(ATTR_SALE_INFO).addAttributeNodes(ATTR_USER);
+		graph.addSubgraph(ATTR_GALLERIES).addAttributeNodes(ATTR_FILE);
+		graph.addSubgraph(ATTR_DETAILS).addAttributeNodes(ATTR_DETAIL);
+		typedQuery.setHint(FETCHGRAPH_HINT, graph);
 
 		// Apply pagination
 		typedQuery.setFirstResult((int) pageable.getOffset());
@@ -80,17 +91,17 @@ public class PropertyRepositoryCustomImpl implements PropertyRepositoryCustom {
 		CriteriaBuilder cb = entityManager.getCriteriaBuilder();
 		CriteriaQuery<Property> query = cb.createQuery(Property.class);
 		Root<Property> root = query.from(Property.class);
-		query.select(root).where(cb.equal(root.get("propertyId"), id));
+		query.select(root).where(cb.equal(root.get(ATTR_PROPERTY_ID), id));
 
 		TypedQuery<Property> typedQuery = entityManager.createQuery(query);
 
 		// Create and apply EntityGraph
 		EntityGraph<Property> graph = entityManager.createEntityGraph(Property.class);
-		graph.addAttributeNodes("type", "area", "saleInfo", "galleries", "details");
-		graph.addSubgraph("saleInfo").addAttributeNodes("user");
-		graph.addSubgraph("galleries").addAttributeNodes("file");
-		graph.addSubgraph("details").addAttributeNodes("detail");
-		typedQuery.setHint("jakarta.persistence.fetchgraph", graph);
+		graph.addAttributeNodes(ATTR_TYPE, ATTR_AREA, ATTR_SALE_INFO, ATTR_GALLERIES, ATTR_DETAILS);
+		graph.addSubgraph(ATTR_SALE_INFO).addAttributeNodes(ATTR_USER);
+		graph.addSubgraph(ATTR_GALLERIES).addAttributeNodes(ATTR_FILE);
+		graph.addSubgraph(ATTR_DETAILS).addAttributeNodes(ATTR_DETAIL);
+		typedQuery.setHint(FETCHGRAPH_HINT, graph);
 
 		List<Property> results = typedQuery.getResultList();
 		return results.isEmpty() ? null : results.get(0);

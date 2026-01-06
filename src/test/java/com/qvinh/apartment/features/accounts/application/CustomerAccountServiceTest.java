@@ -46,14 +46,16 @@ class CustomerAccountServiceTest extends PostgresTestContainer {
 			u.setPassword("x");
 			u.setRole(userRole);
 			userRepository.saveAndFlush(u);
+			}
+
+			var pageAll = service.searchCustomerAccounts(null, org.springframework.data.domain.PageRequest.of(0, 10));
+			assertThat(pageAll.getContent())
+				.isNotEmpty()
+				.allMatch(u -> "USER".equals(u.getRoleName()));
+
+			var pageFiltered = service.searchCustomerAccounts("cust1", org.springframework.data.domain.PageRequest.of(0, 10));
+			assertThat(pageFiltered.getContent()).extracting(com.qvinh.apartment.features.accounts.dto.user.UserRes::getUsername).contains("cust1");
 		}
-
-		var pageAll = service.searchCustomerAccounts(null, org.springframework.data.domain.PageRequest.of(0, 10));
-		assertThat(pageAll.getContent()).allMatch(u -> "USER".equals(u.getRoleName()));
-
-		var pageFiltered = service.searchCustomerAccounts("cust1", org.springframework.data.domain.PageRequest.of(0, 10));
-		assertThat(pageFiltered.getContent()).extracting(com.qvinh.apartment.features.accounts.dto.user.UserRes::getUsername).contains("cust1");
-	}
 
 	@Test
 	@Transactional

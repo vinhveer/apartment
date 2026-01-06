@@ -102,7 +102,7 @@ class UsersServiceTest extends PostgresTestContainer {
 	@Test
 	@Transactional
 	@DisplayName("deleteAvatar clears avatar for current user")
-	void delete_avatar_clears_field() throws Exception {
+	void delete_avatar_clears_field() {
 		Role role = roleRepository.findByRoleName("USER").orElseThrow();
 		User u = new User();
 		u.setUsername("avataruser2");

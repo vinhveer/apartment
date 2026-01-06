@@ -3,6 +3,7 @@ package com.qvinh.apartment.features.properties.application.impl;
 import com.qvinh.apartment.features.properties.application.IPropertyService;
 import com.qvinh.apartment.features.accounts.domain.PropertySaleInfo;
 import com.qvinh.apartment.features.accounts.persistence.PropertySaleInfoRepository;
+import com.qvinh.apartment.features.properties.constants.PropertiesMessages;
 import com.qvinh.apartment.features.properties.domain.Property;
 import com.qvinh.apartment.features.properties.domain.PropertyArea;
 import com.qvinh.apartment.features.properties.domain.PropertyType;
@@ -28,6 +29,8 @@ import java.util.Objects;
 @Service
 public class PropertyService implements IPropertyService {
 
+	private static final String PAGEABLE_NOT_NULL = "pageable must not be null";
+
 	private final PropertyRepository repository;
 	private final PropertyMapper mapper;
 	private final PropertyTypeRepository typeRepository;
@@ -49,11 +52,11 @@ public class PropertyService implements IPropertyService {
 	public PropertyRes create(PropertyCreateReq req) {
 		Property entity = mapper.toEntity(req);
 		PropertyType type = typeRepository.findById(Objects.requireNonNull(req.getTypeId()))
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_TYPE_NOT_FOUND, "Property type not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_TYPE_NOT_FOUND, PropertiesMessages.PROPERTY_TYPE_NOT_FOUND));
 		PropertySaleInfo sale = saleInfoRepository.findByUserId(Objects.requireNonNull(req.getSaleUserId()))
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_SALE_INFO_NOT_FOUND, "Sale info not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_SALE_INFO_NOT_FOUND, PropertiesMessages.PROPERTY_SALE_INFO_NOT_FOUND));
 		PropertyArea area = areaRepository.findById(Objects.requireNonNull(req.getAreaId()))
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_AREA_NOT_FOUND, "Area not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_AREA_NOT_FOUND, PropertiesMessages.PROPERTY_AREA_NOT_FOUND));
 		entity.setType(type);
 		entity.setSaleInfo(sale);
 		entity.setArea(area);
@@ -64,7 +67,7 @@ public class PropertyService implements IPropertyService {
 	@Transactional(readOnly = true)
 	public PropertyRes get(long id) {
 		Property entity = repository.findById(id)
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_NOT_FOUND, "Property not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_NOT_FOUND, PropertiesMessages.PROPERTY_NOT_FOUND));
 		return mapper.toRes(entity);
 	}
 
@@ -72,27 +75,27 @@ public class PropertyService implements IPropertyService {
 	public PropertySelectRes getFull(long id) {
 		Property entity = repository.findByIdWithRelations(id);
 		if (entity == null) {
-			throw new ResourceNotFoundException(ErrorCode.PROPERTY_NOT_FOUND, "Property not found");
+			throw new ResourceNotFoundException(ErrorCode.PROPERTY_NOT_FOUND, PropertiesMessages.PROPERTY_NOT_FOUND);
 		}
 		return mapper.toSelectRes(entity);
 	}
 
 	@Transactional(readOnly = true)
 	public Page<PropertyRes> list(Pageable pageable) {
-		Objects.requireNonNull(pageable, "pageable must not be null");
+		Objects.requireNonNull(pageable, PAGEABLE_NOT_NULL);
 		return repository.findAll(pageable).map(mapper::toRes);
 	}
 
 	@Transactional(readOnly = true)
 	public Page<PropertyRes> search(PropertySearchReq req, Pageable pageable) {
-		Objects.requireNonNull(pageable, "pageable must not be null");
+		Objects.requireNonNull(pageable, PAGEABLE_NOT_NULL);
 		var spec = PropertySpecifications.bySearchReq(req);
 		return repository.findAll(spec, pageable).map(mapper::toRes);
 	}
 
 	@Transactional(readOnly = true)
 	public Page<PropertySelectRes> searchFull(PropertySearchReq req, Pageable pageable) {
-		Objects.requireNonNull(pageable, "pageable must not be null");
+		Objects.requireNonNull(pageable, PAGEABLE_NOT_NULL);
 		var spec = PropertySpecifications.bySearchReq(req);
 		return repository.findAllWithRelations(spec, pageable).map(mapper::toSelectRes);
 	}
@@ -100,14 +103,14 @@ public class PropertyService implements IPropertyService {
 	@Transactional
 	public PropertyRes update(long id, PropertyUpdateReq req) {
 		Property entity = repository.findById(id)
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_NOT_FOUND, "Property not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_NOT_FOUND, PropertiesMessages.PROPERTY_NOT_FOUND));
 		mapper.updateEntityFromReq(req, entity);
 		PropertyType type = typeRepository.findById(Objects.requireNonNull(req.getTypeId()))
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_TYPE_NOT_FOUND, "Property type not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_TYPE_NOT_FOUND, PropertiesMessages.PROPERTY_TYPE_NOT_FOUND));
 		PropertySaleInfo sale = saleInfoRepository.findByUserId(Objects.requireNonNull(req.getSaleUserId()))
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_SALE_INFO_NOT_FOUND, "Sale info not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_SALE_INFO_NOT_FOUND, PropertiesMessages.PROPERTY_SALE_INFO_NOT_FOUND));
 		PropertyArea area = areaRepository.findById(Objects.requireNonNull(req.getAreaId()))
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_AREA_NOT_FOUND, "Area not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_AREA_NOT_FOUND, PropertiesMessages.PROPERTY_AREA_NOT_FOUND));
 		entity.setType(type);
 		entity.setSaleInfo(sale);
 		entity.setArea(area);
@@ -118,7 +121,7 @@ public class PropertyService implements IPropertyService {
 	@Transactional
 	public void delete(long id) {
 		Property entity = repository.findById(id)
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_NOT_FOUND, "Property not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_NOT_FOUND, PropertiesMessages.PROPERTY_NOT_FOUND));
 		repository.delete(Objects.requireNonNull(entity, "property must not be null"));
 	}
 }

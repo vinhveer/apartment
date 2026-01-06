@@ -3,6 +3,8 @@ package com.qvinh.apartment.infrastructure.web;
 import com.qvinh.apartment.shared.api.error.ApiError;
 import com.qvinh.apartment.shared.api.error.ApiErrorResponse;
 import com.qvinh.apartment.shared.api.error.FieldErrorItem;
+import com.qvinh.apartment.shared.constants.DefaultValues;
+import com.qvinh.apartment.shared.constants.ErrorMessages;
 import com.qvinh.apartment.shared.exception.BusinessException;
 import com.qvinh.apartment.shared.exception.ConflictException;
 import com.qvinh.apartment.shared.exception.AppException;
@@ -25,19 +27,15 @@ import jakarta.validation.ConstraintViolationException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-	private static final String REQUEST_ID_ATTR = "requestId";
-	private static final String REQUEST_ID_HEADER = "X-Request-Id";
-
 	private String requestId(HttpServletRequest request) {
-		Object v = request.getAttribute(REQUEST_ID_ATTR);
+		Object v = request.getAttribute(RequestIdFilter.REQUEST_ID_ATTR);
 		if (v instanceof String s && !s.isBlank()) return s;
-		String header = request.getHeader(REQUEST_ID_HEADER);
-		return (header == null || header.isBlank()) ? "unknown" : header;
+		String header = request.getHeader(RequestIdFilter.REQUEST_ID_HEADER);
+		return (header == null || header.isBlank()) ? DefaultValues.UNKNOWN : header;
 	}
 
 	private ResponseEntity<ApiErrorResponse> build(HttpStatus status, ErrorCode code, String message, String requestId,
@@ -47,7 +45,7 @@ public class GlobalExceptionHandler {
 		}
 		ApiError error = new ApiError(code.name(), message, requestId, fieldErrors, details);
 		return ResponseEntity.status(status)
-			.header(REQUEST_ID_HEADER, requestId)
+			.header(RequestIdFilter.REQUEST_ID_HEADER, requestId)
 			.body(ApiErrorResponse.of(error));
 	}
 
@@ -72,7 +70,7 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(DataIntegrityViolationException.class)
 	public ResponseEntity<ApiErrorResponse> handleSql(DataIntegrityViolationException ex, HttpServletRequest request) {
 		String requestId = requestId(request);
-		return build(HttpStatus.CONFLICT, ErrorCode.RESOURCE_CONFLICT, "Conflict", requestId, null, null);
+		return build(HttpStatus.CONFLICT, ErrorCode.RESOURCE_CONFLICT, ErrorMessages.CONFLICT, requestId, null, null);
 	}
 
 	@ExceptionHandler(BusinessException.class)
@@ -86,8 +84,8 @@ public class GlobalExceptionHandler {
 		String requestId = requestId(request);
 		List<FieldErrorItem> errors = ex.getBindingResult().getFieldErrors().stream()
 			.map(e -> new FieldErrorItem(e.getField(), Objects.toString(e.getDefaultMessage(), "Invalid value")))
-			.collect(Collectors.toList());
-		return build(HttpStatus.UNPROCESSABLE_ENTITY, ErrorCode.VALIDATION_ERROR, "Validation failed", requestId, errors, null);
+			.toList();
+		return build(HttpStatus.UNPROCESSABLE_ENTITY, ErrorCode.VALIDATION_ERROR, ErrorMessages.VALIDATION_FAILED, requestId, errors, null);
 	}
 
 	@ExceptionHandler(ConstraintViolationException.class)
@@ -95,45 +93,45 @@ public class GlobalExceptionHandler {
 		String requestId = requestId(request);
 		List<FieldErrorItem> errors = ex.getConstraintViolations().stream()
 			.map(v -> new FieldErrorItem(v.getPropertyPath().toString(), v.getMessage()))
-			.collect(Collectors.toList());
-		return build(HttpStatus.UNPROCESSABLE_ENTITY, ErrorCode.VALIDATION_ERROR, "Validation failed", requestId, errors, null);
+			.toList();
+		return build(HttpStatus.UNPROCESSABLE_ENTITY, ErrorCode.VALIDATION_ERROR, ErrorMessages.VALIDATION_FAILED, requestId, errors, null);
 	}
 
 	@ExceptionHandler(MissingServletRequestParameterException.class)
 	public ResponseEntity<ApiErrorResponse> handleMissingParam(MissingServletRequestParameterException ex, HttpServletRequest request) {
 		String requestId = requestId(request);
 		List<FieldErrorItem> errors = List.of(new FieldErrorItem(ex.getParameterName(), "Missing required parameter"));
-		return build(HttpStatus.UNPROCESSABLE_ENTITY, ErrorCode.VALIDATION_ERROR, "Validation failed", requestId, errors, null);
+		return build(HttpStatus.UNPROCESSABLE_ENTITY, ErrorCode.VALIDATION_ERROR, ErrorMessages.VALIDATION_FAILED, requestId, errors, null);
 	}
 
 	@ExceptionHandler(HttpMessageNotReadableException.class)
 	public ResponseEntity<ApiErrorResponse> handleNotReadable(HttpMessageNotReadableException ex, HttpServletRequest request) {
 		String requestId = requestId(request);
-		return build(HttpStatus.BAD_REQUEST, ErrorCode.MALFORMED_JSON, "Malformed JSON", requestId, null, null);
+		return build(HttpStatus.BAD_REQUEST, ErrorCode.MALFORMED_JSON, ErrorMessages.MALFORMED_JSON, requestId, null, null);
 	}
 
 	@ExceptionHandler(IllegalArgumentException.class)
 	public ResponseEntity<ApiErrorResponse> handleIllegalArgument(IllegalArgumentException ex, HttpServletRequest request) {
 		String requestId = requestId(request);
-		return build(HttpStatus.UNPROCESSABLE_ENTITY, ErrorCode.VALIDATION_ERROR, "Validation failed", requestId,
+		return build(HttpStatus.UNPROCESSABLE_ENTITY, ErrorCode.VALIDATION_ERROR, ErrorMessages.VALIDATION_FAILED, requestId,
 			List.of(new FieldErrorItem("request", ex.getMessage())), null);
 	}
 
 	@ExceptionHandler({ AccessDeniedException.class, AuthorizationDeniedException.class })
 	public ResponseEntity<ApiErrorResponse> handleAccessDenied(Exception ex, HttpServletRequest request) {
 		String requestId = requestId(request);
-		return build(HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN, "Access denied", requestId, null, null);
+		return build(HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN, ErrorMessages.ACCESS_DENIED, requestId, null, null);
 	}
 
 	@ExceptionHandler(AuthenticationException.class)
 	public ResponseEntity<ApiErrorResponse> handleAuth(AuthenticationException ex, HttpServletRequest request) {
 		String requestId = requestId(request);
-		return build(HttpStatus.UNAUTHORIZED, ErrorCode.UNAUTHORIZED, "Authentication required", requestId, null, null);
+		return build(HttpStatus.UNAUTHORIZED, ErrorCode.UNAUTHORIZED, ErrorMessages.AUTHENTICATION_REQUIRED, requestId, null, null);
 	}
 
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ApiErrorResponse> handleOther(Exception ex, HttpServletRequest request) {
 		String requestId = requestId(request);
-		return build(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.INTERNAL_ERROR, "Internal server error", requestId, null, null);
+		return build(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.INTERNAL_ERROR, ErrorMessages.INTERNAL_SERVER_ERROR, requestId, null, null);
 	}
 }

@@ -1,6 +1,8 @@
 package com.qvinh.apartment.infrastructure.security;
 
 import com.qvinh.apartment.features.accounts.persistence.UserRepository;
+import com.qvinh.apartment.features.accounts.constants.AccountsMessages;
+import com.qvinh.apartment.shared.constants.RoleNames;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -24,9 +26,9 @@ public class CustomUserDetailsService implements UserDetailsService {
 	public UserDetails loadUserByUsername(String usernameOrEmail) throws UsernameNotFoundException {
 		var user = userRepository.findByUsername(Objects.requireNonNull(usernameOrEmail))
 			.orElseGet(() -> userRepository.findByEmail(Objects.requireNonNull(usernameOrEmail))
-				.orElseThrow(() -> new UsernameNotFoundException("User not found")));
-		var roleName = user.getRole() != null ? user.getRole().getRoleName() : "USER";
-		var auth = new SimpleGrantedAuthority("ROLE_" + roleName.toUpperCase(Locale.ROOT));
+				.orElseThrow(() -> new UsernameNotFoundException(AccountsMessages.USER_NOT_FOUND)));
+		var roleName = user.getRole() != null ? user.getRole().getRoleName() : RoleNames.USER;
+		var auth = new SimpleGrantedAuthority(RoleNames.ROLE_PREFIX + roleName.toUpperCase(Locale.ROOT));
 		return org.springframework.security.core.userdetails.User.withUsername(user.getUsername())
 			.password(user.getPassword())
 			.authorities(List.of(auth))

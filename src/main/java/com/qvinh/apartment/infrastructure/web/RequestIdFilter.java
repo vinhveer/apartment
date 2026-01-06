@@ -11,12 +11,13 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import com.qvinh.apartment.shared.constants.WebHeaders;
 
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class RequestIdFilter extends OncePerRequestFilter {
 
-	public static final String REQUEST_ID_HEADER = "X-Request-Id";
+	public static final String REQUEST_ID_HEADER = WebHeaders.X_REQUEST_ID;
 	public static final String REQUEST_ID_ATTR = "requestId";
 	public static final String MDC_KEY = "requestId";
 
@@ -37,4 +38,3 @@ public class RequestIdFilter extends OncePerRequestFilter {
 		}
 	}
 }
-

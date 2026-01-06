@@ -13,6 +13,9 @@ import com.qvinh.apartment.features.accounts.mapper.UserMapper;
 import com.qvinh.apartment.features.accounts.persistence.PropertySaleInfoRepository;
 import com.qvinh.apartment.features.accounts.persistence.RoleRepository;
 import com.qvinh.apartment.features.accounts.persistence.UserRepository;
+import com.qvinh.apartment.features.accounts.constants.AccountsMessages;
+import com.qvinh.apartment.shared.constants.DefaultValues;
+import com.qvinh.apartment.shared.constants.RoleNames;
 import com.qvinh.apartment.shared.error.ErrorCode;
 import com.qvinh.apartment.shared.exception.ConflictException;
 import com.qvinh.apartment.shared.exception.AppException;
@@ -24,6 +27,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Locale;
 import java.util.Objects;
 
 @Service
@@ -51,22 +55,27 @@ public class AccountService implements IAccountService {
 	@Transactional
 	public UserRes createEmployeeAccount(AccountCreateReq req) {
 		userRepository.findByUsername(Objects.requireNonNull(req.getUsername())).ifPresent(u -> {
-			throw new ConflictException(ErrorCode.USERNAME_ALREADY_EXISTS, "Username already exists");
+			throw new ConflictException(ErrorCode.USERNAME_ALREADY_EXISTS, AccountsMessages.USERNAME_ALREADY_EXISTS);
 		});
+
 		userRepository.findByEmail(Objects.requireNonNull(req.getEmail())).ifPresent(u -> {
-			throw new ConflictException(ErrorCode.EMAIL_ALREADY_EXISTS, "Email already exists");
+			throw new ConflictException(ErrorCode.EMAIL_ALREADY_EXISTS, AccountsMessages.EMAIL_ALREADY_EXISTS);
 		});
-		String roleName = Objects.requireNonNull(req.getRoleName()).toUpperCase();
-		if (!roleName.equals("ADMIN") && !roleName.equals("SALE")) {
-			throw new AppException(ErrorCode.VALIDATION_ERROR, HttpStatus.UNPROCESSABLE_ENTITY, "Invalid roleName");
+
+		String roleName = normalizeEmployeeRoleName(req.getRoleName());
+		
+		if (!isEmployeeRole(roleName)) {
+			throw new AppException(ErrorCode.VALIDATION_ERROR, HttpStatus.UNPROCESSABLE_ENTITY, AccountsMessages.INVALID_ROLE_NAME);
 		}
+
 		Role role = roleRepository.findByRoleName(roleName)
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.ROLE_NOT_FOUND, "Role not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.ROLE_NOT_FOUND, AccountsMessages.ROLE_NOT_FOUND));
+		
 		User user = userMapper.toEntity(req);
 		user.setPassword(passwordEncoder.encode(req.getPassword()));
 		user.setRole(role);
 
-		if ("ADMIN".equals(roleName)) {
+		if (RoleNames.ADMIN.equals(roleName)) {
 			if (req.getFullName() == null || req.getFullName().isBlank()) {
 				String fallbackName = req.getDisplayName() != null && !req.getDisplayName().isBlank()
 					? req.getDisplayName()
@@ -74,7 +83,7 @@ public class AccountService implements IAccountService {
 				req.setFullName(fallbackName);
 			}
 			if (req.getPhone() == null || req.getPhone().isBlank()) {
-				req.setPhone("N/A");
+				req.setPhone(DefaultValues.NOT_AVAILABLE);
 			}
 		}
 
@@ -95,41 +104,18 @@ public class AccountService implements IAccountService {
 	public Page<UserRes> searchEmployeeAccounts(String q, Pageable pageable) {
 		Objects.requireNonNull(pageable, "pageable must not be null");
 		String pattern = (q == null || q.isBlank()) ? null : "%" + q.trim() + "%";
-		java.util.List<String> roles = java.util.List.of("ADMIN", "SALE");
-		return userRepository.searchByRoles(roles, pattern, pageable).map(userMapper::toRes);
+		return userRepository.searchByRoles(RoleNames.EMPLOYEE_ROLES, pattern, pageable).map(userMapper::toRes);
 	}
 
 	@Transactional
 	public UserRes editEmployeeAccount(long id, UserUpdateReq req) {
 		User u = userRepository.findById(id)
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND, "User not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND, AccountsMessages.USER_NOT_FOUND));
+
 		userMapper.updateEntityFromReq(req, u);
 		User updated = userRepository.save(Objects.requireNonNull(u, "user must not be null"));
-		// Update PropertySaleInfo if fullName/phone provided and user is employee (ADMIN/SALE)
-		String roleName = Objects.requireNonNull(updated.getRole()).getRoleName();
-		if (("ADMIN".equals(roleName) || "SALE".equals(roleName)) &&
-			(req.getFullName() != null || req.getPhone() != null)) {
-			saleInfoRepository.findByUserId(id).ifPresentOrElse(existing -> {
-				PropertySaleInfo info = Objects.requireNonNull(existing, "existing sale info must not be null");
-				if (req.getFullName() != null && !req.getFullName().isBlank()) {
-					info.setFullName(req.getFullName());
-				}
-				if (req.getPhone() != null && !req.getPhone().isBlank()) {
-					info.setPhone(req.getPhone());
-				}
-				saleInfoRepository.save(info);
-			}, () -> {
-				// Create sale info if not exists (should not happen for employee accounts, but handle gracefully)
-				if (req.getFullName() != null && !req.getFullName().isBlank() &&
-					req.getPhone() != null && !req.getPhone().isBlank()) {
-					PropertySaleInfo info = new PropertySaleInfo();
-					info.setUser(Objects.requireNonNull(updated, "updated user must not be null"));
-					info.setFullName(req.getFullName());
-					info.setPhone(req.getPhone());
-					saleInfoRepository.save(info);
-				}
-			});
-		}
+		maybeUpdateSaleInfo(updated, req);
+
 		return userMapper.toRes(updated);
 	}
 
@@ -138,50 +124,108 @@ public class AccountService implements IAccountService {
 		// delete sale info first if exists (FK constraint)
 		saleInfoRepository.findByUserId(id).ifPresent(info -> saleInfoRepository.deleteByUserId(id));
 		User u = userRepository.findById(id)
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND, "User not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND, AccountsMessages.USER_NOT_FOUND));
 		userRepository.delete(Objects.requireNonNull(u, "user must not be null"));
 	}
 
 	@Transactional
 	public UserRes changeEmployeeRole(long id, UserRoleUpdateReq req) {
 		User u = userRepository.findById(id)
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND, "User not found"));
-		String targetRole = Objects.requireNonNull(req.getRoleName()).toUpperCase();
-		if (!targetRole.equals("ADMIN") && !targetRole.equals("SALE")) {
-			throw new AppException(ErrorCode.VALIDATION_ERROR, HttpStatus.UNPROCESSABLE_ENTITY, "Invalid roleName");
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND, AccountsMessages.USER_NOT_FOUND));
+
+		String targetRole = normalizeEmployeeRoleName(req.getRoleName());
+
+		if (!isEmployeeRole(targetRole)) {
+			throw new AppException(ErrorCode.VALIDATION_ERROR, HttpStatus.UNPROCESSABLE_ENTITY, AccountsMessages.INVALID_ROLE_NAME);
 		}
+
 		Role role = roleRepository.findByRoleName(targetRole)
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.ROLE_NOT_FOUND, "Role not found"));
-		String current = Objects.requireNonNull(u.getRole()).getRoleName();
-		if (current.equals(targetRole)) {
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.ROLE_NOT_FOUND, AccountsMessages.ROLE_NOT_FOUND));
+
+		String currentRole = Objects.requireNonNull(u.getRole()).getRoleName();
+		if (currentRole.equals(targetRole)) {
 			return userMapper.toRes(u);
 		}
-		if (targetRole.equals("SALE")) {
-			u.setRole(role);
-			User saved = userRepository.save(u);
-			// Backfill fullName/phone if not provided (similar to createEmployeeAccount logic)
-			String fullName = (req.getFullName() != null && !req.getFullName().isBlank())
-				? req.getFullName()
-				: (u.getDisplayName() != null && !u.getDisplayName().isBlank() ? u.getDisplayName() : u.getUsername());
-			String phone = (req.getPhone() != null && !req.getPhone().isBlank()) ? req.getPhone() : "N/A";
-			// If sale info already exists (e.g. user was created as ADMIN with sale info), update it; otherwise create new
-			saleInfoRepository.findByUserId(id).ifPresentOrElse(existing -> {
-				existing.setFullName(fullName);
-				existing.setPhone(phone);
-				saleInfoRepository.save(existing);
-			}, () -> {
-				PropertySaleInfo info = new PropertySaleInfo();
-				info.setUser(saved);
-				info.setFullName(fullName);
-				info.setPhone(phone);
-				saleInfoRepository.save(info);
-			});
-			return userMapper.toRes(saved);
-		} else {
-			// Switch to ADMIN: keep sale info if exists, only change role
-			u.setRole(role);
-			User saved = userRepository.save(u);
-			return userMapper.toRes(saved);
+
+		u.setRole(role);
+		User saved = userRepository.save(u);
+
+		if (RoleNames.SALE.equals(targetRole)) {
+			String fullName = resolveFullName(req, u);
+			String phone = resolvePhone(req);
+			upsertSaleInfo(saved, fullName, phone);
 		}
+
+		return userMapper.toRes(saved);
+	}
+
+	private static String normalizeEmployeeRoleName(String roleName) {
+		return Objects.requireNonNull(roleName, "roleName must not be null").toUpperCase(Locale.ROOT);
+	}
+
+	private static boolean isEmployeeRole(String roleName) {
+		return RoleNames.isEmployeeRole(roleName);
+	}
+
+	private static String resolveFullName(UserRoleUpdateReq req, User u) {
+		String fromReq = req.getFullName();
+		if (fromReq != null && !fromReq.isBlank()) return fromReq;
+		String displayName = u.getDisplayName();
+		if (displayName != null && !displayName.isBlank()) return displayName;
+		return u.getUsername();
+	}
+
+	private static String resolvePhone(UserRoleUpdateReq req) {
+		String fromReq = req.getPhone();
+		return (fromReq != null && !fromReq.isBlank()) ? fromReq : DefaultValues.NOT_AVAILABLE;
+	}
+
+	private static boolean hasSaleInfoUpdate(UserUpdateReq req) {
+		return req.getFullName() != null || req.getPhone() != null;
+	}
+
+	private static boolean canCreateSaleInfo(UserUpdateReq req) {
+		return req.getFullName() != null && !req.getFullName().isBlank()
+			&& req.getPhone() != null && !req.getPhone().isBlank();
+	}
+
+	private void maybeUpdateSaleInfo(User updated, UserUpdateReq req) {
+		String roleName = Objects.requireNonNull(updated.getRole()).getRoleName();
+		if (!isEmployeeRole(roleName) || !hasSaleInfoUpdate(req)) return;
+
+		long userId = Objects.requireNonNull(updated.getId(), "userId must not be null");
+
+		saleInfoRepository.findByUserId(userId).ifPresentOrElse(existing -> {
+			if (req.getFullName() != null && !req.getFullName().isBlank()) {
+				existing.setFullName(req.getFullName());
+			}
+			if (req.getPhone() != null && !req.getPhone().isBlank()) {
+				existing.setPhone(req.getPhone());
+			}
+			saleInfoRepository.save(existing);
+		}, () -> {
+			if (!canCreateSaleInfo(req)) return;
+			PropertySaleInfo info = new PropertySaleInfo();
+			info.setUser(updated);
+			info.setFullName(req.getFullName());
+			info.setPhone(req.getPhone());
+			saleInfoRepository.save(info);
+		});
+	}
+
+	private void upsertSaleInfo(User user, String fullName, String phone) {
+		long userId = Objects.requireNonNull(user.getId(), "userId must not be null");
+		
+		saleInfoRepository.findByUserId(userId).ifPresentOrElse(existing -> {
+			existing.setFullName(fullName);
+			existing.setPhone(phone);
+			saleInfoRepository.save(existing);
+		}, () -> {
+			PropertySaleInfo info = new PropertySaleInfo();
+			info.setUser(user);
+			info.setFullName(fullName);
+			info.setPhone(phone);
+			saleInfoRepository.save(info);
+		});
 	}
 }

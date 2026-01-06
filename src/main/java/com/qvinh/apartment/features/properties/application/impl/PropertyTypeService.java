@@ -5,6 +5,7 @@ import com.qvinh.apartment.features.properties.domain.PropertyType;
 import com.qvinh.apartment.features.properties.dto.property_type.PropertyTypeCreateReq;
 import com.qvinh.apartment.features.properties.dto.property_type.PropertyTypeRes;
 import com.qvinh.apartment.features.properties.dto.property_type.PropertyTypeUpdateReq;
+import com.qvinh.apartment.features.properties.constants.PropertiesMessages;
 import com.qvinh.apartment.shared.error.ErrorCode;
 import com.qvinh.apartment.shared.exception.ResourceNotFoundException;
 import com.qvinh.apartment.features.properties.mapper.PropertyTypeMapper;
@@ -19,6 +20,8 @@ import java.util.Objects;
 @Service
 public class PropertyTypeService implements IPropertyTypeService {
 
+	private static final String TYPE_NOT_NULL = "type must not be null";
+
 	private final PropertyTypeRepository repository;
 	private final PropertyTypeMapper mapper;
 
@@ -30,7 +33,7 @@ public class PropertyTypeService implements IPropertyTypeService {
 	@Transactional
 	public PropertyTypeRes create(PropertyTypeCreateReq req) {
 		PropertyType type = mapper.toEntity(req);
-		PropertyType updated = repository.save(Objects.requireNonNull(type, "type must not be null"));
+		PropertyType updated = repository.save(Objects.requireNonNull(type, TYPE_NOT_NULL));
 		PropertyType saved = Objects.requireNonNull(updated, "updated must not be null");
 		return mapper.toRes(saved);
 	}
@@ -38,7 +41,7 @@ public class PropertyTypeService implements IPropertyTypeService {
 	@Transactional(readOnly = true)
 	public PropertyTypeRes get(int id) {
 		PropertyType type = repository.findById(id)
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_TYPE_NOT_FOUND, "Property type not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_TYPE_NOT_FOUND, PropertiesMessages.PROPERTY_TYPE_NOT_FOUND));
 		return mapper.toRes(type);
 	}
 
@@ -61,16 +64,16 @@ public class PropertyTypeService implements IPropertyTypeService {
 	@Transactional
 	public PropertyTypeRes update(int id, PropertyTypeUpdateReq req) {
 		PropertyType type = repository.findById(id)
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_TYPE_NOT_FOUND, "Property type not found"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_TYPE_NOT_FOUND, PropertiesMessages.PROPERTY_TYPE_NOT_FOUND));
 		mapper.updateEntityFromReq(req, type);
-		PropertyType updated = repository.save(Objects.requireNonNull(type, "type must not be null"));
+		PropertyType updated = repository.save(Objects.requireNonNull(type, TYPE_NOT_NULL));
 		return mapper.toRes(updated);
 	}
 
 	@Transactional
 	public void delete(int id) {
 		PropertyType type = repository.findById(id)
-			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_TYPE_NOT_FOUND, "Property type not found"));
-		repository.delete(Objects.requireNonNull(type, "type must not be null"));
+			.orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_TYPE_NOT_FOUND, PropertiesMessages.PROPERTY_TYPE_NOT_FOUND));
+		repository.delete(Objects.requireNonNull(type, TYPE_NOT_NULL));
 	}
 }

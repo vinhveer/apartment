@@ -53,16 +53,16 @@ class FileServiceTest extends PostgresTestContainer {
 	void upload_public_image_generates_variants_and_dedup() throws Exception {
 		MultipartFile mf = sampleJpeg("x.jpg");
 		StoredFileMeta meta1 = fileService.upload(mf, "PUBLIC");
-		assertThat(meta1.getFileId()).isNotNull();
-		assertThat(meta1.getAccessLevel()).isEqualTo("PUBLIC");
-		assertThat(Files.exists(Path.of("./build/test-uploads").resolve(meta1.getRelativePath()))).isTrue();
-		var variants = variantRepo.findByFile_FileId(Objects.requireNonNull(meta1.getFileId()));
-		assertThat(variants.size()).isGreaterThanOrEqualTo(1);
+			assertThat(meta1.getFileId()).isNotNull();
+			assertThat(meta1.getAccessLevel()).isEqualTo("PUBLIC");
+			assertThat(Files.exists(Path.of("./build/test-uploads").resolve(meta1.getRelativePath()))).isTrue();
+			var variants = variantRepo.findByFile_FileId(Objects.requireNonNull(meta1.getFileId()));
+			assertThat(variants).hasSizeGreaterThanOrEqualTo(1);
 
-		// de-dup
-		StoredFileMeta meta2 = fileService.upload(sampleJpeg("anyname.jpg"), "PUBLIC");
-		assertThat(meta2.getFileId()).isEqualTo(meta1.getFileId());
-	}
+			// de-dup
+			StoredFileMeta meta2 = fileService.upload(sampleJpeg("anyname.jpg"), "PUBLIC");
+			assertThat(meta2.getFileId()).isEqualTo(meta1.getFileId());
+		}
 
 	@Test
 	@Transactional

@@ -1,9 +1,16 @@
 package com.qvinh.apartment.infrastructure.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.qvinh.apartment.features.auth.api.AuthController;
+import com.qvinh.apartment.features.files.api.FilesController;
+import com.qvinh.apartment.features.properties.api.PropertyAreaController;
+import com.qvinh.apartment.features.properties.api.PropertyController;
+import com.qvinh.apartment.features.properties.api.PropertyDefineDetailsController;
+import com.qvinh.apartment.features.properties.api.PropertyTypeController;
 import com.qvinh.apartment.infrastructure.security.JwtAuthFilter;
 import com.qvinh.apartment.infrastructure.security.RestAccessDeniedHandler;
 import com.qvinh.apartment.infrastructure.security.RestAuthenticationEntryPoint;
+import com.qvinh.apartment.shared.constants.WebPaths;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -49,37 +56,33 @@ public class SecurityConfig {
 				.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
 				// Files
-				.requestMatchers(HttpMethod.POST, "/api/files").authenticated()
-				.requestMatchers(HttpMethod.GET, "/api/files/**").permitAll()
+				.requestMatchers(HttpMethod.POST, FilesController.BASE_PATH).authenticated()
+				.requestMatchers(HttpMethod.GET, FilesController.BASE_PATH_ALL).permitAll()
 
 				// Static files (public uploads)
-				.requestMatchers(HttpMethod.GET, "/public/**").permitAll()
+				.requestMatchers(HttpMethod.GET, WebPaths.PUBLIC_FILES).permitAll()
 
 				// Auth
-				.requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
-				.requestMatchers(HttpMethod.POST, "/api/auth/refresh").permitAll()
-				.requestMatchers(HttpMethod.POST, "/api/auth/logout").permitAll()
-
-				// Account creation (requires auth)
-				.requestMatchers(HttpMethod.POST, "/api/create-sale").authenticated()
-				.requestMatchers(HttpMethod.POST, "/api/create-admin").authenticated()
+				.requestMatchers(HttpMethod.POST, AuthController.LOGIN_PATH).permitAll()
+				.requestMatchers(HttpMethod.POST, AuthController.REFRESH_PATH).permitAll()
+				.requestMatchers(HttpMethod.POST, AuthController.LOGOUT_PATH).permitAll()
 
 				// Property - public read/search
-				.requestMatchers(HttpMethod.GET, "/api/properties").permitAll()
-				.requestMatchers(HttpMethod.GET, "/api/properties/**").permitAll()
-				.requestMatchers(HttpMethod.POST, "/api/properties/search").permitAll()
+				.requestMatchers(HttpMethod.GET, PropertyController.BASE_PATH).permitAll()
+				.requestMatchers(HttpMethod.GET, PropertyController.BASE_PATH_ALL).permitAll()
+				.requestMatchers(HttpMethod.POST, PropertyController.SEARCH_PATH).permitAll()
 
 				// Property Type - public read
-				.requestMatchers(HttpMethod.GET, "/api/property-types").permitAll()
-				.requestMatchers(HttpMethod.GET, "/api/property-types/**").permitAll()
+				.requestMatchers(HttpMethod.GET, PropertyTypeController.BASE_PATH).permitAll()
+				.requestMatchers(HttpMethod.GET, PropertyTypeController.BASE_PATH_ALL).permitAll()
 
 				// Property Area - public read
-				.requestMatchers(HttpMethod.GET, "/api/areas").permitAll()
-				.requestMatchers(HttpMethod.GET, "/api/areas/**").permitAll()
+				.requestMatchers(HttpMethod.GET, PropertyAreaController.BASE_PATH).permitAll()
+				.requestMatchers(HttpMethod.GET, PropertyAreaController.BASE_PATH_ALL).permitAll()
 
 				// Property Define Details - public read
-				.requestMatchers(HttpMethod.GET, "/api/property-define-details").permitAll()
-				.requestMatchers(HttpMethod.GET, "/api/property-define-details/**").permitAll()
+				.requestMatchers(HttpMethod.GET, PropertyDefineDetailsController.BASE_PATH).permitAll()
+				.requestMatchers(HttpMethod.GET, PropertyDefineDetailsController.BASE_PATH_ALL).permitAll()
 
 				// All other requests require authentication
 				.anyRequest().authenticated()

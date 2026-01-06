@@ -16,8 +16,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/properties")
+@RequestMapping(PropertyController.BASE_PATH)
 public class PropertyController {
+
+	public static final String BASE_PATH = "/api/properties";
+	public static final String BASE_PATH_ALL = BASE_PATH + "/**";
+	public static final String SEARCH_PATH = BASE_PATH + "/search";
 
 	private final IPropertyService service;
 
@@ -49,7 +53,7 @@ public class PropertyController {
 	}
 
 	@PostMapping("/search")
-	public ResponseEntity<ApiResponse<? extends Page<?>>> search(
+	public ResponseEntity<ApiResponse<Page<?>>> search(
 		@RequestBody PropertySearchReq req,
 		@RequestParam(defaultValue = "0") int page,
 		@RequestParam(defaultValue = "10") int size,
@@ -60,11 +64,11 @@ public class PropertyController {
 		if ("select".equalsIgnoreCase(mode)) {
 			Page<PropertySelectRes> res = service.searchFull(req, pageable);
 			var meta = new ApiResponse.Meta(page, size, res.getTotalElements());
-			return ResponseEntity.ok(ApiResponse.ok("Property search result (select)", res, meta));
+			return ResponseEntity.ok(ApiResponse.ok("Property search result (select)", (Page<?>) res, meta));
 		}
 		Page<PropertyRes> res = service.search(req, pageable);
 		var meta = new ApiResponse.Meta(page, size, res.getTotalElements());
-		return ResponseEntity.ok(ApiResponse.ok("Property search result", res, meta));
+		return ResponseEntity.ok(ApiResponse.ok("Property search result", (Page<?>) res, meta));
 	}
 
 	@PutMapping("/{id}")
