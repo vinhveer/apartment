@@ -1,5 +1,6 @@
-package com.qvinh.apartment.features.accounts.application;
+package com.qvinh.apartment.features.accounts.application.impl;
 
+import com.qvinh.apartment.features.accounts.application.ICustomerAccountService;
 import com.qvinh.apartment.features.accounts.domain.User;
 import com.qvinh.apartment.features.accounts.dto.user.UserRes;
 import com.qvinh.apartment.features.accounts.dto.user.UserUpdateReq;

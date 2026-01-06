@@ -1,5 +1,6 @@
-package com.qvinh.apartment.features.properties.application;
+package com.qvinh.apartment.features.properties.application.impl;
 
+import com.qvinh.apartment.features.properties.application.IPropertyAreaService;
 import com.qvinh.apartment.features.properties.domain.PropertyArea;
 import com.qvinh.apartment.features.properties.dto.property_area.PropertyAreaCreateReq;
 import com.qvinh.apartment.features.properties.dto.property_area.PropertyAreaRes;

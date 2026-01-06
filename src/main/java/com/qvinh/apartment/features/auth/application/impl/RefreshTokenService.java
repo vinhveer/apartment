@@ -1,5 +1,6 @@
-package com.qvinh.apartment.features.auth.application;
+package com.qvinh.apartment.features.auth.application.impl;
 
+import com.qvinh.apartment.features.auth.application.IRefreshTokenService;
 import com.qvinh.apartment.features.accounts.domain.User;
 import com.qvinh.apartment.features.accounts.persistence.UserRepository;
 import com.qvinh.apartment.features.auth.domain.RefreshToken;

@@ -1,5 +1,6 @@
-package com.qvinh.apartment.features.files.application;
+package com.qvinh.apartment.features.files.application.impl;
 
+import com.qvinh.apartment.features.files.application.IFileService;
 import com.qvinh.apartment.features.files.domain.StoredFileMeta;
 import com.qvinh.apartment.features.files.domain.StoredFileVariant;
 import com.qvinh.apartment.shared.error.ErrorCode;

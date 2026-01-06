@@ -1,5 +1,6 @@
-package com.qvinh.apartment.features.properties.application;
+package com.qvinh.apartment.features.properties.application.impl;
 
+import com.qvinh.apartment.features.properties.application.IPropertyService;
 import com.qvinh.apartment.features.accounts.domain.PropertySaleInfo;
 import com.qvinh.apartment.features.accounts.persistence.PropertySaleInfoRepository;
 import com.qvinh.apartment.features.properties.domain.Property;

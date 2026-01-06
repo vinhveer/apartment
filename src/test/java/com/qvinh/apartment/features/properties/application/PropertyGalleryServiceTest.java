@@ -1,5 +1,6 @@
 package com.qvinh.apartment.features.properties.application;
 
+import com.qvinh.apartment.features.properties.application.impl.PropertyGalleryService;
 import com.qvinh.apartment.features.accounts.domain.*;
 import com.qvinh.apartment.features.accounts.persistence.*;
 import com.qvinh.apartment.features.files.domain.StoredFileMeta;

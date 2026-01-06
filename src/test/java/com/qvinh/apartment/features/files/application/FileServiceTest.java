@@ -1,5 +1,6 @@
 package com.qvinh.apartment.features.files.application;
 
+import com.qvinh.apartment.features.files.application.impl.FileService;
 import com.qvinh.apartment.features.files.domain.StoredFileMeta;
 import com.qvinh.apartment.features.files.domain.StoredFileVariant;
 import com.qvinh.apartment.features.files.dto.FileMetaUpdateReq;
@@ -175,4 +176,3 @@ class FileServiceTest extends PostgresTestContainer {
 		assertThat(cleared.getTags()).isNull();
 	}
 }
-

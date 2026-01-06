@@ -1,5 +1,6 @@
 package com.qvinh.apartment.features.properties.application;
 
+import com.qvinh.apartment.features.properties.application.impl.PropertyAreaService;
 import com.qvinh.apartment.features.properties.dto.property_area.PropertyAreaCreateReq;
 import com.qvinh.apartment.features.properties.dto.property_area.PropertyAreaUpdateReq;
 import com.qvinh.apartment.shared.exception.ResourceNotFoundException;

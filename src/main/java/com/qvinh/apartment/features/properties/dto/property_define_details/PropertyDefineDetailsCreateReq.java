@@ -3,7 +3,13 @@ package com.qvinh.apartment.features.properties.dto.property_define_details;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
+@Getter
+@Setter
+@NoArgsConstructor
 public class PropertyDefineDetailsCreateReq {
 	@NotBlank
 	@Size(max = 255)
@@ -17,14 +23,4 @@ public class PropertyDefineDetailsCreateReq {
 
 	@NotNull
 	private Boolean showInHomePage;
-
-	public String getDetailName() { return detailName; }
-	public void setDetailName(String detailName) { this.detailName = detailName; }
-	public Boolean getIsNumber() { return isNumber; }
-	public void setIsNumber(Boolean isNumber) { this.isNumber = isNumber; }
-	public String getUnit() { return unit; }
-	public void setUnit(String unit) { this.unit = unit; }
-	public Boolean getShowInHomePage() { return showInHomePage; }
-	public void setShowInHomePage(Boolean showInHomePage) { this.showInHomePage = showInHomePage; }
 }
-

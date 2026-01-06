@@ -1,5 +1,6 @@
 package com.qvinh.apartment.features.accounts.application;
 
+import com.qvinh.apartment.features.accounts.application.impl.CustomerAccountService;
 import com.qvinh.apartment.features.accounts.domain.Role;
 import com.qvinh.apartment.features.accounts.dto.user.UserUpdateReq;
 import com.qvinh.apartment.features.accounts.persistence.RoleRepository;
