@@ -82,6 +82,29 @@ class PropertyTypeServiceTest extends PostgresTestContainer {
 
 	@Test
 	@Transactional
+	@DisplayName("search(keyword, pageable) filters by keyword and ignores blanks")
+	void search_keyword_and_blank() {
+		var req1 = new PropertyTypeCreateReq();
+		req1.setTypeName("Luxury Condo");
+		service.create(req1);
+		var req2 = new PropertyTypeCreateReq();
+		req2.setTypeName("Luxury Villa");
+		service.create(req2);
+		var req3 = new PropertyTypeCreateReq();
+		req3.setTypeName("Budget Apartment");
+		service.create(req3);
+
+		Pageable pageable = PageRequest.of(0, 5, Sort.by("typeName").ascending());
+		var luxPage = service.search("luxury", pageable);
+		assertThat(luxPage.getTotalElements()).isEqualTo(2);
+		assertThat(luxPage.getContent()).allMatch(res -> res.getTypeName().toLowerCase().contains("luxury"));
+
+		var blankPage = service.search("   ", pageable);
+		assertThat(blankPage.getTotalElements()).isGreaterThanOrEqualTo(3);
+	}
+
+	@Test
+	@Transactional
 	@DisplayName("concurrency duplicates yield one success and one constraint violation")
 	void concurrency_duplicates() throws Exception {
 		PropertyTypeCreateReq base = new PropertyTypeCreateReq();

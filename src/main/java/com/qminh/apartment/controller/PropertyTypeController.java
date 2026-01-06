@@ -37,12 +37,21 @@ public class PropertyTypeController {
 	@GetMapping
 	public ResponseEntity<ApiResponse<Page<PropertyTypeRes>>> list(
 		@RequestParam(defaultValue = "0") int page,
-		@RequestParam(defaultValue = "10") int size
+		@RequestParam(defaultValue = "10") int size,
+		@RequestParam(required = false) String keyword
 	) {
 		Pageable pageable = PageRequest.of(page, size);
-		Page<PropertyTypeRes> res = service.list(pageable);
+		Page<PropertyTypeRes> res;
+		String message;
+		if (keyword != null && !keyword.trim().isEmpty()) {
+			res = service.search(keyword, pageable);
+			message = "Property type search result";
+		} else {
+			res = service.list(pageable);
+			message = "Property type list";
+		}
 		var meta = new ApiResponse.Meta(page, size, res.getTotalElements());
-		return ResponseEntity.ok(ApiResponse.ok("Property type list", res, meta));
+		return ResponseEntity.ok(ApiResponse.ok(message, res, meta));
 	}
 
 	@PutMapping("/{id}")

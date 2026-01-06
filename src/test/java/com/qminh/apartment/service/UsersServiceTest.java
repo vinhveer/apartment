@@ -3,12 +3,10 @@ package com.qminh.apartment.service;
 import com.qminh.apartment.dto.user.SelfProfileUpdateReq;
 import com.qminh.apartment.entity.Role;
 import com.qminh.apartment.entity.User;
-import com.qminh.apartment.repository.PropertySaleInfoRepository;
 import com.qminh.apartment.repository.RoleRepository;
 import com.qminh.apartment.repository.UserRepository;
 import com.qminh.apartment.service.impl.UsersService;
 import com.qminh.apartment.testsupport.PostgresTestContainer;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,7 +15,6 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.imageio.ImageIO;
@@ -34,7 +31,6 @@ class UsersServiceTest extends PostgresTestContainer {
 	@Autowired private UsersService service;
 	@Autowired private UserRepository userRepository;
 	@Autowired private RoleRepository roleRepository;
-	@Autowired private PropertySaleInfoRepository saleInfoRepository;
 
 	@BeforeEach
 	void ensureRoles() {

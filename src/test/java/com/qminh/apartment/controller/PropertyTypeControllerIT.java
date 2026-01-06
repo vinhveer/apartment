@@ -77,6 +77,11 @@ class PropertyTypeControllerIT extends PostgresTestContainer {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.meta.total").exists())
 			.andExpect(jsonPath("$.data.content").isArray());
+		// search
+		mockMvc.perform(get("/api/property-types?page=0&size=5&keyword=PTA"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.message").value("Property type search result"))
+			.andExpect(jsonPath("$.data.content[0].typeName").value("PTA"));
 		// 404 get/update/delete not found
 		mockMvc.perform(get("/api/property-types/{id}", 999999))
 			.andExpect(status().isNotFound());

@@ -48,6 +48,16 @@ public class PropertyTypeService implements IPropertyTypeService {
 		return repository.findAll(pageable).map(mapper::toRes);
 	}
 
+	@Transactional(readOnly = true)
+	public Page<PropertyTypeRes> search(String keyword, Pageable pageable) {
+		Objects.requireNonNull(pageable, "pageable must not be null");
+		if (keyword == null || keyword.trim().isEmpty()) {
+			return repository.findAll(pageable).map(mapper::toRes);
+		}
+		return repository.findByTypeNameContainingIgnoreCase(keyword.trim(), pageable)
+			.map(mapper::toRes);
+	}
+
 	@Transactional
 	public PropertyTypeRes update(int id, PropertyTypeUpdateReq req) {
 		PropertyType type = repository.findById(id)

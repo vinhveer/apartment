@@ -10,6 +10,7 @@ public interface IPropertyTypeService {
 	PropertyTypeRes create(PropertyTypeCreateReq req);
 	PropertyTypeRes get(int id);
 	Page<PropertyTypeRes> list(Pageable pageable);
+	Page<PropertyTypeRes> search(String keyword, Pageable pageable);
 	PropertyTypeRes update(int id, PropertyTypeUpdateReq req);
 	void delete(int id);
 }
