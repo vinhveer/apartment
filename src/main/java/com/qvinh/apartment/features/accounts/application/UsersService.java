@@ -30,7 +30,7 @@ public class UsersService implements IUsersService {
 	private final UserRepository userRepository;
 	private final PropertySaleInfoRepository saleInfoRepository;
 	private final UserMapper userMapper;
-	private static final String NOT_FOUND = "User not found: ";
+
 	private static final int AVATAR_MAX_SIZE = 200;
 	private static final List<String> ALLOWED_MIME = List.of("image/jpeg", "image/png", "image/webp");
 

@@ -52,8 +52,6 @@ public class PropertyDetailsService implements IPropertyDetailsService {
 
 		List<PropertyDefineDetails> defines = defineRepository.findAllById(Objects.requireNonNull(reqIds));
 		if (defines.size() != reqIds.size()) {
-			Set<Integer> found = defines.stream().map(PropertyDefineDetails::getDetailId).collect(Collectors.toSet());
-			List<Integer> missing = reqIds.stream().filter(id -> !found.contains(id)).toList();
 			throw new ResourceNotFoundException(ErrorCode.PROPERTY_DEFINE_DETAIL_NOT_FOUND, "Define details not found");
 		}
 
